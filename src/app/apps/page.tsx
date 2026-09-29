@@ -1,10 +1,17 @@
 import { AppCard } from "@/components/app-card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AppsFilters } from "@/components/apps/apps-filters";
+import { EmptyState } from "@/components/states/empty-state";
+import { Pagination } from "@/components/ui/pagination";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { searchPublishedApplications } from "@/lib/search/applications";
+import type { ApplicationSort } from "@/lib/search/applications";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 24;
 
 type SearchParams = Promise<{
   q?: string;
@@ -12,7 +19,14 @@ type SearchParams = Promise<{
   platform?: string;
   license?: string;
   tag?: string;
+  sort?: string;
+  page?: string;
 }>;
+
+function parseSort(value?: string): ApplicationSort {
+  if (value === "name" || value === "updated") return value;
+  return "stars";
+}
 
 export default async function AppsBrowsePage({
   searchParams,
@@ -20,6 +34,9 @@ export default async function AppsBrowsePage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
+  const page = Math.max(1, Number(params.page) || 1);
+  const sort = parseSort(params.sort);
+
   const [result, categories, platforms, licenses] = await Promise.all([
     searchPublishedApplications({
       q: params.q,
@@ -27,107 +44,100 @@ export default async function AppsBrowsePage({
       platformSlug: params.platform,
       licenseSlug: params.license,
       tagSlug: params.tag,
-      limit: 48,
+      sort,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
     }),
     prisma.category.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.platform.findMany({ orderBy: { name: "asc" } }),
     prisma.license.findMany({ orderBy: { name: "asc" } }),
   ]);
 
+  const filterParams = {
+    q: params.q,
+    category: params.category,
+    platform: params.platform,
+    license: params.license,
+    tag: params.tag,
+    sort: params.sort ?? "stars",
+  };
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Browse apps</h1>
-        <p className="text-muted-foreground">
-          Search and filter the public directory.
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Browse apps" },
+        ]}
+      />
+
+      <div className="space-y-2">
+        <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
+          Browse apps
+        </h1>
+        <p className="max-w-2xl text-muted-foreground">
+          Search the public directory by name, category, platform, and license.
         </p>
       </div>
 
-      <form className="grid gap-4 rounded-lg border p-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-2 lg:col-span-2">
-          <Label htmlFor="q">Search</Label>
-          <Input
-            id="q"
-            name="q"
-            defaultValue={params.q ?? ""}
-            placeholder="Name, tagline, description…"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <select
-            id="category"
-            name="category"
-            defaultValue={params.category ?? ""}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-          >
-            <option value="">All</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="platform">Platform</Label>
-          <select
-            id="platform"
-            name="platform"
-            defaultValue={params.platform ?? ""}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-          >
-            <option value="">All</option>
-            {platforms.map((p) => (
-              <option key={p.id} value={p.slug}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="license">License</Label>
-          <select
-            id="license"
-            name="license"
-            defaultValue={params.license ?? ""}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-          >
-            <option value="">All</option>
-            {licenses.map((l) => (
-              <option key={l.id} value={l.slug}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end md:col-span-2 lg:col-span-4">
-          <button
-            type="submit"
-            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            Apply filters
-          </button>
-        </div>
-      </form>
+      <AppsFilters
+        params={filterParams}
+        categories={categories}
+        platforms={platforms}
+        licenses={licenses}
+      />
 
-      <p className="text-sm text-muted-foreground">
-        {result.total} app{result.total === 1 ? "" : "s"}
-      </p>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {result.items.map((app) => (
-          <AppCard
-            key={app.id}
-            slug={app.slug}
-            name={app.name}
-            tagline={app.tagline}
-            primaryLanguage={app.primaryLanguage}
-            stars={app.stars}
-            categories={app.categories}
-          />
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">{result.total}</span>{" "}
+          app{result.total === 1 ? "" : "s"}
+          {params.q ? (
+            <>
+              {" "}
+              matching &ldquo;{params.q}&rdquo;
+            </>
+          ) : null}
+        </p>
       </div>
+
+      {result.items.length === 0 ? (
+        <EmptyState
+          title="No apps match your filters"
+          description="Try clearing filters or broadening your search terms."
+          action={
+            <Button asChild variant="outline">
+              <Link href="/apps">Clear filters</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {result.items.map((app) => (
+              <AppCard
+                key={app.id}
+                slug={app.slug}
+                name={app.name}
+                tagline={app.tagline}
+                logoUrl={app.logoUrl}
+                primaryLanguage={app.primaryLanguage}
+                stars={app.stars}
+                categories={app.categories}
+                platforms={app.platforms}
+                licenses={app.licenses}
+                verified={app.signals.length > 0}
+              />
+            ))}
+          </div>
+          <Pagination
+            basePath="/apps"
+            searchParams={filterParams}
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={result.total}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -3,43 +3,43 @@ import { auth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { isModerator } from "@/lib/auth/rbac";
 import type { UserRole } from "@/generated/prisma";
+import { cn } from "@/lib/utils";
+
+const navLink =
+  "text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm";
 
 export async function SiteHeader() {
   const session = await auth();
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <nav className="flex items-center gap-6 text-sm">
-          <Link href="/" className="font-semibold tracking-tight">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+        <nav className="flex items-center gap-5" aria-label="Main">
+          <Link
+            href="/"
+            className="font-display text-lg font-medium tracking-tight text-foreground"
+          >
             OpenSourceApp
           </Link>
-          <Link href="/apps" className="text-muted-foreground hover:text-foreground">
-            Browse
-          </Link>
-          <Link
-            href="/submit"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Submit
-          </Link>
-          {session?.user &&
-            isModerator((session.user.role as UserRole) ?? "USER") && (
-              <Link
-                href="/admin"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Admin
-              </Link>
-            )}
+          <div className="hidden items-center gap-4 sm:flex">
+            <Link href="/apps" className={navLink}>
+              Browse
+            </Link>
+            <Link href="/submit" className={navLink}>
+              Submit
+            </Link>
+            {session?.user &&
+              isModerator((session.user.role as UserRole) ?? "USER") && (
+                <Link href="/admin" className={navLink}>
+                  Admin
+                </Link>
+              )}
+          </div>
         </nav>
         <div className="flex items-center gap-2">
           {session?.user ? (
             <>
-              <Link
-                href="/dashboard"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
+              <Link href="/dashboard" className={cn(navLink, "hidden sm:inline")}>
                 Dashboard
               </Link>
               <form
