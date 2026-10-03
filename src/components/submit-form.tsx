@@ -12,9 +12,49 @@ import {
   createSubmissionFromRepoAction,
   fetchRepoMetadataAction,
 } from "@/server/actions/submissions";
+import {
+  isSubmissionFieldErrors,
+  submissionErrorStep,
+  submissionFieldErrorSummary,
+  type SubmissionFieldErrors,
+} from "@/lib/validation/submission-errors";
 import { cn } from "@/lib/utils";
 
 const STEPS = ["Repository", "Details", "Confirm"] as const;
+
+function FieldError({
+  id,
+  messages,
+}: {
+  id?: string;
+  messages?: string[];
+}) {
+  const message = messages?.[0];
+  if (!message) return null;
+  return (
+    <p id={id} className="text-sm text-destructive" role="alert">
+      {message}
+    </p>
+  );
+}
+
+function ValidationSummary({ fieldErrors }: { fieldErrors: SubmissionFieldErrors }) {
+  const lines = submissionFieldErrorSummary(fieldErrors);
+  if (lines.length === 0) return null;
+  return (
+    <div
+      className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+      role="alert"
+    >
+      <p className="font-medium text-destructive">Please fix the following:</p>
+      <ul className="mt-2 list-inside list-disc space-y-1 text-destructive">
+        {lines.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function SubmitForm() {
   const [step, setStep] = useState(0);
@@ -27,12 +67,29 @@ export function SubmitForm() {
   const [metadataConfirmed, setMetadataConfirmed] = useState(false);
   const [repoMetadata, setRepoMetadata] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<SubmissionFieldErrors>({});
   const [pending, startTransition] = useTransition();
+
+  function clearErrors() {
+    setError(null);
+    setFieldErrors({});
+  }
+
+  function applyActionError(err: unknown) {
+    if (isSubmissionFieldErrors(err)) {
+      setFieldErrors(err);
+      setError(null);
+      setStep(submissionErrorStep(err));
+      return;
+    }
+    setFieldErrors({});
+    setError(typeof err === "string" ? err : "Something went wrong. Try again.");
+  }
 
   const host = repositoryUrl ? detectRepoHost(repositoryUrl) : null;
 
   function loadMetadata() {
-    setError(null);
+    clearErrors();
     startTransition(async () => {
       const res = await fetchRepoMetadataAction(repositoryUrl);
       if (res.error) {
@@ -51,7 +108,7 @@ export function SubmitForm() {
   }
 
   function save(submit: boolean) {
-    setError(null);
+    clearErrors();
     startTransition(async () => {
       const res = await createSubmissionFromRepoAction(
         repositoryUrl,
@@ -66,9 +123,7 @@ export function SubmitForm() {
         },
       );
       if (res.error) {
-        setError(
-          typeof res.error === "string" ? res.error : "Validation failed",
-        );
+        applyActionError(res.error);
         return;
       }
       window.location.href = "/dashboard";
@@ -115,6 +170,10 @@ export function SubmitForm() {
                 value={repositoryUrl}
                 onChange={(e) => setRepositoryUrl(e.target.value)}
                 placeholder="https://github.com/org/project"
+                aria-invalid={Boolean(fieldErrors.repositoryUrl)}
+                aria-describedby={
+                  fieldErrors.repositoryUrl ? "repositoryUrl-error" : undefined
+                }
               />
               <Button
                 type="button"
@@ -134,7 +193,14 @@ export function SubmitForm() {
                 work if metadata is reachable.
               </p>
             )}
+            <FieldError
+              id="repositoryUrl-error"
+              messages={fieldErrors.repositoryUrl}
+            />
           </div>
+          {Object.keys(fieldErrors).length > 0 && step === 0 && (
+            <ValidationSummary fieldErrors={fieldErrors} />
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </section>
       )}
@@ -147,6 +213,9 @@ export function SubmitForm() {
               Edit anything that should appear on the public directory page.
             </p>
           </div>
+          {Object.keys(fieldErrors).length > 0 && (
+            <ValidationSummary fieldErrors={fieldErrors} />
+          )}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
@@ -155,7 +224,9 @@ export function SubmitForm() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                aria-invalid={Boolean(fieldErrors.name)}
               />
+              <FieldError messages={fieldErrors.name} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="tagline">Tagline</Label>
@@ -163,7 +234,9 @@ export function SubmitForm() {
                 id="tagline"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
+                aria-invalid={Boolean(fieldErrors.tagline)}
               />
+              <FieldError messages={fieldErrors.tagline} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
@@ -173,7 +246,9 @@ export function SubmitForm() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={6}
                 required
+                aria-invalid={Boolean(fieldErrors.description)}
               />
+              <FieldError messages={fieldErrors.description} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -182,7 +257,9 @@ export function SubmitForm() {
                   id="homepageUrl"
                   value={homepageUrl}
                   onChange={(e) => setHomepageUrl(e.target.value)}
+                  aria-invalid={Boolean(fieldErrors.homepageUrl)}
                 />
+                <FieldError messages={fieldErrors.homepageUrl} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="primaryLanguage">Primary language</Label>
@@ -190,7 +267,9 @@ export function SubmitForm() {
                   id="primaryLanguage"
                   value={primaryLanguage}
                   onChange={(e) => setPrimaryLanguage(e.target.value)}
+                  aria-invalid={Boolean(fieldErrors.primaryLanguage)}
                 />
+                <FieldError messages={fieldErrors.primaryLanguage} />
               </div>
             </div>
           </div>
@@ -238,6 +317,9 @@ export function SubmitForm() {
             <span>I confirm this information is accurate and I have rights to
               submit this listing.</span>
           </label>
+          {Object.keys(fieldErrors).length > 0 && (
+            <ValidationSummary fieldErrors={fieldErrors} />
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex flex-wrap justify-between gap-2">
             <Button type="button" variant="ghost" onClick={() => setStep(1)}>
