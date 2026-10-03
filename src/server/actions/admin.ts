@@ -9,6 +9,7 @@ import {
 } from "@/lib/applications/submission-status";
 import { publishSubmissionAsApplication } from "@/server/applications/publish";
 import { writeAuditLog } from "@/server/audit";
+import { parseModeratorFeedback } from "@/lib/validation/moderation";
 import { SubmissionStatus, UserRole } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -20,6 +21,14 @@ export async function moderateSubmissionAction(
   const session = await requireRole(UserRole.MODERATOR);
   if (!moderatorTransitions.includes(nextStatus)) {
     return { error: "Invalid target status" };
+  }
+
+  const feedback = parseModeratorFeedback(
+    nextStatus as SubmissionStatusType,
+    reviewerNotes,
+  );
+  if (!feedback.ok) {
+    return { error: feedback.error };
   }
 
   const submission = await prisma.submission.findUnique({
@@ -36,11 +45,19 @@ export async function moderateSubmissionAction(
     return { error: (e as Error).message };
   }
 
+  const terminalReview =
+    nextStatus === SubmissionStatus.APPROVED ||
+    nextStatus === SubmissionStatus.REJECTED ||
+    nextStatus === SubmissionStatus.CHANGES_REQUESTED;
+
   await prisma.submission.update({
     where: { id: submissionId },
     data: {
       status: nextStatus,
-      reviewerNotes: reviewerNotes ?? submission.reviewerNotes,
+      reviewerNotes:
+        feedback.value ??
+        (terminalReview ? null : submission.reviewerNotes),
+      reviewedAt: terminalReview ? new Date() : submission.reviewedAt,
     },
   });
 
@@ -53,10 +70,17 @@ export async function moderateSubmissionAction(
     action: `submission.${nextStatus.toLowerCase()}`,
     entityType: "Submission",
     entityId: submissionId,
-    metadata: { from: submission.status, to: nextStatus },
+    metadata: {
+      from: submission.status,
+      to: nextStatus,
+      ...(feedback.value
+        ? { messageSnippet: feedback.value.slice(0, 120) }
+        : {}),
+    },
   });
 
   revalidatePath("/admin");
+  revalidatePath("/dashboard");
   revalidatePath("/apps");
   return { ok: true };
 }

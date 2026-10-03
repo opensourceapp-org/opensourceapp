@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { SubmissionStatusBadge } from "@/components/submission-status-badge";
+import { ModeratorFeedbackBanner } from "@/components/moderator-feedback-banner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/states/empty-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -76,30 +77,58 @@ export default async function DashboardPage() {
           />
         ) : (
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-            {submissions.map((s) => (
-              <li
-                key={s.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium">{s.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Updated {s.updatedAt.toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <SubmissionStatusBadge status={s.status} />
-                  {s.application && (
-                    <Link
-                      href={`/apps/${s.application.slug}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      View listing
-                    </Link>
+            {submissions.map((s) => {
+              const showFeedback =
+                s.reviewerNotes &&
+                (s.status === "CHANGES_REQUESTED" || s.status === "REJECTED");
+              const canEdit =
+                s.status === "CHANGES_REQUESTED" || s.status === "DRAFT";
+
+              return (
+                <li key={s.id} className="px-4 py-4 sm:px-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{s.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Updated {s.updatedAt.toLocaleDateString()}
+                        {s.reviewedAt &&
+                          (s.status === "CHANGES_REQUESTED" ||
+                            s.status === "REJECTED") &&
+                          ` · Reviewed ${s.reviewedAt.toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <SubmissionStatusBadge status={s.status} />
+                      {canEdit && (
+                        <Link
+                          href={`/submit/${s.id}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          {s.status === "CHANGES_REQUESTED"
+                            ? "Update & resubmit"
+                            : "Continue draft"}
+                        </Link>
+                      )}
+                      {s.application && (
+                        <Link
+                          href={`/apps/${s.application.slug}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          View listing
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                  {showFeedback && (
+                    <ModeratorFeedbackBanner
+                      className="mt-3"
+                      status={s.status}
+                      message={s.reviewerNotes!}
+                    />
                   )}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
