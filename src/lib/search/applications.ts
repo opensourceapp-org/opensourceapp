@@ -1,12 +1,15 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma";
 
+export type ApplicationSort = "stars" | "name" | "updated";
+
 export type ApplicationSearchFilters = {
   q?: string;
   categorySlug?: string;
   platformSlug?: string;
   licenseSlug?: string;
   tagSlug?: string;
+  sort?: ApplicationSort;
   limit?: number;
   offset?: number;
 };
@@ -49,10 +52,18 @@ export async function searchPublishedApplications(
   const take = Math.min(filters.limit ?? 24, 100);
   const skip = filters.offset ?? 0;
 
+  const sort = filters.sort ?? "stars";
+  const orderBy: Prisma.ApplicationOrderByWithRelationInput[] =
+    sort === "name"
+      ? [{ name: "asc" }]
+      : sort === "updated"
+        ? [{ updatedAt: "desc" }, { name: "asc" }]
+        : [{ stars: "desc" }, { name: "asc" }];
+
   const [items, total] = await Promise.all([
     prisma.application.findMany({
       where,
-      orderBy: [{ stars: "desc" }, { name: "asc" }],
+      orderBy,
       take,
       skip,
       include: {
