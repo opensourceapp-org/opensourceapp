@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const repositoryUrlSchema = z
   .string()
-  .url()
+  .min(1, "Repository URL is required")
+  .url("Enter a valid repository URL")
   .refine(
     (url) => {
       try {
@@ -20,12 +21,30 @@ export const repositoryUrlSchema = z
   );
 
 export const submissionFormSchema = z.object({
-  name: z.string().min(2).max(120),
-  tagline: z.string().max(200).optional().or(z.literal("")),
-  description: z.string().min(20).max(10_000),
-  homepageUrl: z.string().url().optional().or(z.literal("")),
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(120, "Name must be at most 120 characters"),
+  tagline: z
+    .string()
+    .max(200, "Tagline must be at most 200 characters")
+    .optional()
+    .or(z.literal("")),
+  description: z
+    .string()
+    .min(20, "Description must be at least 20 characters")
+    .max(10_000, "Description must be at most 10,000 characters"),
+  homepageUrl: z
+    .string()
+    .url("Enter a valid homepage URL")
+    .optional()
+    .or(z.literal("")),
   repositoryUrl: repositoryUrlSchema,
-  primaryLanguage: z.string().max(64).optional().or(z.literal("")),
+  primaryLanguage: z
+    .string()
+    .max(64, "Primary language must be at most 64 characters")
+    .optional()
+    .or(z.literal("")),
   submit: z.boolean().optional(),
 });
 

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { fetchRepositoryMetadata } from "@/lib/applications/repo-metadata";
 import { rateLimit } from "@/lib/rate-limit";
+import { submissionFieldErrorsFromZod } from "@/lib/validation/submission-errors";
 import { submissionFormSchema } from "@/lib/validation/submission";
 import { SubmissionStatus } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
@@ -36,7 +37,7 @@ export async function saveSubmissionAction(
 
   const parsed = submissionFormSchema.safeParse(raw);
   if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors };
+    return { error: submissionFieldErrorsFromZod(parsed.error) };
   }
 
   const data = parsed.data;
@@ -94,7 +95,7 @@ export async function createSubmissionFromRepoAction(
     repositoryUrl,
   });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors };
+    return { error: submissionFieldErrorsFromZod(parsed.error) };
   }
 
   const meta = await fetchRepositoryMetadata(repositoryUrl).catch(() => null);
