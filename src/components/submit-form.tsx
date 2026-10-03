@@ -12,6 +12,11 @@ import {
   createSubmissionFromRepoAction,
   fetchRepoMetadataAction,
 } from "@/server/actions/submissions";
+import {
+  type FieldErrorMap,
+  flattenFieldErrors,
+  parseActionError,
+} from "@/lib/validation/field-errors";
 import { cn } from "@/lib/utils";
 
 const STEPS = ["Repository", "Details", "Confirm"] as const;
@@ -27,16 +32,71 @@ export function SubmitForm() {
   const [metadataConfirmed, setMetadataConfirmed] = useState(false);
   const [repoMetadata, setRepoMetadata] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
   const [pending, startTransition] = useTransition();
+
+  function applyActionError(err: unknown) {
+    const parsed = parseActionError(err);
+    setFieldErrors(parsed.fieldErrors);
+    setError(
+      parsed.fieldErrors && Object.keys(parsed.fieldErrors).length > 0
+        ? parsed.message
+        : parsed.message ?? "Something went wrong.",
+    );
+    if (parsed.fieldErrors.repositoryUrl) setStep(0);
+    else if (
+      parsed.fieldErrors.name ||
+      parsed.fieldErrors.description ||
+      parsed.fieldErrors.tagline ||
+      parsed.fieldErrors.homepageUrl ||
+      parsed.fieldErrors.primaryLanguage
+    ) {
+      setStep(1);
+    }
+  }
+
+  function clearErrors() {
+    setError(null);
+    setFieldErrors({});
+  }
+
+  function fieldError(id: string) {
+    const msgs = fieldErrors[id];
+    if (!msgs?.length) return null;
+    return (
+      <p id={`${id}-error`} className="text-sm text-destructive" role="alert">
+        {msgs.join(" ")}
+      </p>
+    );
+  }
+
+  function validationSummary() {
+    const lines = flattenFieldErrors(fieldErrors);
+    if (!lines.length) return null;
+    return (
+      <div
+        className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+        role="alert"
+        aria-live="polite"
+      >
+        <p className="font-medium">Could not save your submission</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   const host = repositoryUrl ? detectRepoHost(repositoryUrl) : null;
 
   function loadMetadata() {
-    setError(null);
+    clearErrors();
     startTransition(async () => {
       const res = await fetchRepoMetadataAction(repositoryUrl);
       if (res.error) {
-        setError(res.error);
+        applyActionError(res.error);
         return;
       }
       const data = res.data!;
@@ -51,7 +111,7 @@ export function SubmitForm() {
   }
 
   function save(submit: boolean) {
-    setError(null);
+    clearErrors();
     startTransition(async () => {
       const res = await createSubmissionFromRepoAction(
         repositoryUrl,
@@ -66,9 +126,7 @@ export function SubmitForm() {
         },
       );
       if (res.error) {
-        setError(
-          typeof res.error === "string" ? res.error : "Validation failed",
-        );
+        applyActionError(res.error);
         return;
       }
       window.location.href = "/dashboard";
@@ -115,6 +173,11 @@ export function SubmitForm() {
                 value={repositoryUrl}
                 onChange={(e) => setRepositoryUrl(e.target.value)}
                 placeholder="https://github.com/org/project"
+                aria-invalid={Boolean(fieldErrors.repositoryUrl)}
+                aria-describedby={
+                  fieldErrors.repositoryUrl ? "repositoryUrl-error" : undefined
+                }
+                className={cn(fieldErrors.repositoryUrl && "border-destructive")}
               />
               <Button
                 type="button"
@@ -134,8 +197,12 @@ export function SubmitForm() {
                 work if metadata is reachable.
               </p>
             )}
+            {fieldError("repositoryUrl")}
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {validationSummary()}
+          {error && !Object.keys(fieldErrors).length && (
+            <p className="text-sm text-destructive" role="alert">{error}</p>
+          )}
         </section>
       )}
 
@@ -147,6 +214,7 @@ export function SubmitForm() {
               Edit anything that should appear on the public directory page.
             </p>
           </div>
+          {validationSummary()}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
@@ -155,7 +223,11 @@ export function SubmitForm() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                aria-invalid={Boolean(fieldErrors.name)}
+                aria-describedby={fieldErrors.name ? "name-error" : undefined}
+                className={cn(fieldErrors.name && "border-destructive")}
               />
+              {fieldError("name")}
             </div>
             <div className="space-y-2">
               <Label htmlFor="tagline">Tagline</Label>
@@ -163,7 +235,13 @@ export function SubmitForm() {
                 id="tagline"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
+                aria-invalid={Boolean(fieldErrors.tagline)}
+                aria-describedby={
+                  fieldErrors.tagline ? "tagline-error" : undefined
+                }
+                className={cn(fieldErrors.tagline && "border-destructive")}
               />
+              {fieldError("tagline")}
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
@@ -173,7 +251,16 @@ export function SubmitForm() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={6}
                 required
+                aria-invalid={Boolean(fieldErrors.description)}
+                aria-describedby={
+                  fieldErrors.description ? "description-error" : undefined
+                }
+                className={cn(fieldErrors.description && "border-destructive")}
               />
+              <p className="text-xs text-muted-foreground">
+                At least 20 characters.
+              </p>
+              {fieldError("description")}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -182,7 +269,13 @@ export function SubmitForm() {
                   id="homepageUrl"
                   value={homepageUrl}
                   onChange={(e) => setHomepageUrl(e.target.value)}
+                  aria-invalid={Boolean(fieldErrors.homepageUrl)}
+                  aria-describedby={
+                    fieldErrors.homepageUrl ? "homepageUrl-error" : undefined
+                  }
+                  className={cn(fieldErrors.homepageUrl && "border-destructive")}
                 />
+                {fieldError("homepageUrl")}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="primaryLanguage">Primary language</Label>
@@ -190,7 +283,17 @@ export function SubmitForm() {
                   id="primaryLanguage"
                   value={primaryLanguage}
                   onChange={(e) => setPrimaryLanguage(e.target.value)}
+                  aria-invalid={Boolean(fieldErrors.primaryLanguage)}
+                  aria-describedby={
+                    fieldErrors.primaryLanguage
+                      ? "primaryLanguage-error"
+                      : undefined
+                  }
+                  className={cn(
+                    fieldErrors.primaryLanguage && "border-destructive",
+                  )}
                 />
+                {fieldError("primaryLanguage")}
               </div>
             </div>
           </div>
@@ -238,7 +341,10 @@ export function SubmitForm() {
             <span>I confirm this information is accurate and I have rights to
               submit this listing.</span>
           </label>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {validationSummary()}
+          {error && !Object.keys(fieldErrors).length && (
+            <p className="text-sm text-destructive" role="alert">{error}</p>
+          )}
           <div className="flex flex-wrap justify-between gap-2">
             <Button type="button" variant="ghost" onClick={() => setStep(1)}>
               Back
