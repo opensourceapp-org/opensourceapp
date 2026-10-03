@@ -11,6 +11,7 @@ import { publishSubmissionAsApplication } from "@/server/applications/publish";
 import { writeAuditLog } from "@/server/audit";
 import { SubmissionStatus, UserRole } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
+import { moderateSubmissionSchema } from "@/lib/validation/moderation";
 
 export async function moderateSubmissionAction(
   submissionId: string,
@@ -18,6 +19,19 @@ export async function moderateSubmissionAction(
   reviewerNotes?: string,
 ) {
   const session = await requireRole(UserRole.MODERATOR);
+
+  const parsed = moderateSubmissionSchema.safeParse({
+    submissionId,
+    nextStatus,
+    reviewerNotes,
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.flatten().fieldErrors.reviewerNotes?.[0] ??
+        "Invalid moderation request",
+    };
+  }
+
   if (!moderatorTransitions.includes(nextStatus)) {
     return { error: "Invalid target status" };
   }
@@ -36,11 +50,17 @@ export async function moderateSubmissionAction(
     return { error: (e as Error).message };
   }
 
+  const notes =
+    nextStatus === SubmissionStatus.CHANGES_REQUESTED ||
+    nextStatus === SubmissionStatus.REJECTED
+      ? parsed.data.reviewerNotes?.trim()
+      : reviewerNotes?.trim() ?? submission.reviewerNotes;
+
   await prisma.submission.update({
     where: { id: submissionId },
     data: {
       status: nextStatus,
-      reviewerNotes: reviewerNotes ?? submission.reviewerNotes,
+      reviewerNotes: notes ?? submission.reviewerNotes,
     },
   });
 
@@ -53,10 +73,15 @@ export async function moderateSubmissionAction(
     action: `submission.${nextStatus.toLowerCase()}`,
     entityType: "Submission",
     entityId: submissionId,
-    metadata: { from: submission.status, to: nextStatus },
+    metadata: {
+      from: submission.status,
+      to: nextStatus,
+      reviewerNotesPreview: notes?.slice(0, 200),
+    },
   });
 
   revalidatePath("/admin");
+  revalidatePath("/dashboard");
   revalidatePath("/apps");
   return { ok: true };
 }

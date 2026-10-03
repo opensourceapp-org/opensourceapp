@@ -21,7 +21,7 @@ export default async function DashboardPage() {
     ["SUBMITTED", "UNDER_REVIEW"].includes(s.status),
   ).length;
   const needsAction = submissions.filter((s) =>
-    ["CHANGES_REQUESTED", "DRAFT"].includes(s.status),
+    ["CHANGES_REQUESTED", "DRAFT", "REJECTED"].includes(s.status),
   ).length;
 
   return (
@@ -81,11 +81,28 @@ export default async function DashboardPage() {
                 key={s.id}
                 className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-medium">{s.name}</p>
                   <p className="text-sm text-muted-foreground">
                     Updated {s.updatedAt.toLocaleDateString()}
                   </p>
+                  {s.reviewerNotes &&
+                    (s.status === "CHANGES_REQUESTED" ||
+                      s.status === "REJECTED") && (
+                      <div
+                        className="mt-3 rounded-lg border border-border bg-surface-muted p-3 text-sm"
+                        role="status"
+                      >
+                        <p className="font-medium text-foreground">
+                          {s.status === "CHANGES_REQUESTED"
+                            ? "Moderator feedback"
+                            : "Rejection reason"}
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                          {s.reviewerNotes}
+                        </p>
+                      </div>
+                    )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <SubmissionStatusBadge status={s.status} />
