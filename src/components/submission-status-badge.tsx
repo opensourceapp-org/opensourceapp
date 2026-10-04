@@ -11,6 +11,7 @@ const statusConfig: Record<
   APPROVED: { label: "Published", variant: "default" },
   REJECTED: { label: "Rejected", variant: "destructive" },
   CHANGES_REQUESTED: { label: "Needs changes", variant: "outline" },
+  DELETED: { label: "Deleted", variant: "outline" },
 };
 
 type SubmissionStatusBadgeProps = {

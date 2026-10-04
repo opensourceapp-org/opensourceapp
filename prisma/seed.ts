@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient, UserRole } from "../src/generated/prisma/client";
@@ -6,17 +8,20 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+type CategorySeed = { slug: string; name: string; sortOrder: number };
+
+function loadCategories(): CategorySeed[] {
+  const path = join(process.cwd(), "prisma/data/categories.json");
+  return JSON.parse(readFileSync(path, "utf8")) as CategorySeed[];
+}
+
 async function main() {
-  const categories = [
-    { slug: "developer-tools", name: "Developer tools", sortOrder: 1 },
-    { slug: "productivity", name: "Productivity", sortOrder: 2 },
-    { slug: "infrastructure", name: "Infrastructure", sortOrder: 3 },
-  ];
+  const categories = loadCategories();
   for (const c of categories) {
     await prisma.category.upsert({
       where: { slug: c.slug },
-      create: c,
-      update: c,
+      create: { ...c, status: "APPROVED" },
+      update: { name: c.name, sortOrder: c.sortOrder, status: "APPROVED" },
     });
   }
 

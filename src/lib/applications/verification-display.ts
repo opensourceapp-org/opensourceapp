@@ -25,6 +25,10 @@ const SIGNAL_COPY: Partial<
     label: "Latest release",
     description: "A public release was detected",
   },
+  REPOSITORY_OWNERSHIP: {
+    label: "Repository ownership",
+    description: "Verified via .opensourceapp/verification",
+  },
   MAINTAINER: {
     label: "Maintainer",
     description: "Maintainer identity verified",

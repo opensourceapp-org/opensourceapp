@@ -20,6 +20,12 @@ export const repositoryUrlSchema = z
     { message: "Repository must be a GitHub or GitLab URL" },
   );
 
+export const categoryIdsSchema = z
+  .array(z.string().min(1))
+  .max(3, "Select at most 3 categories");
+
+export const alternativeIdsSchema = z.array(z.string().min(1)).max(10);
+
 export const submissionFormSchema = z.object({
   name: z
     .string()
@@ -50,7 +56,10 @@ export const submissionFormSchema = z.object({
     .max(64, "Select a license from the list")
     .optional()
     .or(z.literal("")),
+  categoryIds: categoryIdsSchema.optional().default([]),
+  alternativeIds: alternativeIdsSchema.optional().default([]),
   submit: z.boolean().optional(),
+  ownershipVerified: z.boolean().optional(),
 });
 
 export type SubmissionFormInput = z.infer<typeof submissionFormSchema>;
@@ -69,4 +78,23 @@ export const repoMetadataSchema = z.object({
   licenseKey: z.string().nullable().optional(),
   licenseName: z.string().nullable().optional(),
   raw: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const pendingCategorySchema = z.object({
+  name: z
+    .string()
+    .min(2, "Category name must be at least 2 characters")
+    .max(80, "Category name must be at most 80 characters"),
+});
+
+export const pendingSoftwareSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(120, "Name must be at most 120 characters"),
+  websiteUrl: z
+    .string()
+    .url("Enter a valid website URL")
+    .optional()
+    .or(z.literal("")),
 });

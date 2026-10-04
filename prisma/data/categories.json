@@ -1,0 +1,14 @@
+[
+  { "slug": "developer-tools", "name": "Developer tools", "sortOrder": 1 },
+  { "slug": "productivity", "name": "Productivity", "sortOrder": 2 },
+  { "slug": "infrastructure", "name": "Infrastructure", "sortOrder": 3 },
+  { "slug": "security", "name": "Security", "sortOrder": 4 },
+  { "slug": "communication", "name": "Communication", "sortOrder": 5 },
+  { "slug": "analytics", "name": "Analytics", "sortOrder": 6 },
+  { "slug": "design", "name": "Design", "sortOrder": 7 },
+  { "slug": "education", "name": "Education", "sortOrder": 8 },
+  { "slug": "finance", "name": "Finance", "sortOrder": 9 },
+  { "slug": "gaming", "name": "Gaming", "sortOrder": 10 },
+  { "slug": "media", "name": "Media", "sortOrder": 11 },
+  { "slug": "ai-ml", "name": "AI & machine learning", "sortOrder": 12 }
+]

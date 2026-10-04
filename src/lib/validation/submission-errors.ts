@@ -14,7 +14,10 @@ export const SUBMISSION_FIELD_LABELS: Record<keyof SubmissionFormInput, string> 
     repositoryUrl: "Repository URL",
     primaryLanguage: "Primary language",
     licenseSlug: "License",
+    categoryIds: "Categories",
+    alternativeIds: "Alternatives",
     submit: "Submit",
+    ownershipVerified: "Repository verification",
   };
 
 export function submissionFieldErrorsFromZod(
@@ -49,7 +52,10 @@ export function isSubmissionFieldErrors(
   );
 }
 
-/** Wizard step that should show the first invalid field (0 = repository, 1 = details). */
+/**
+ * Wizard step for the first invalid field:
+ * 0 app info, 1 categories/alternatives, 2 verification, 3 review.
+ */
 export function submissionErrorStep(fieldErrors: SubmissionFieldErrors): number {
   if (fieldErrors.repositoryUrl?.length) return 0;
   if (
@@ -60,7 +66,14 @@ export function submissionErrorStep(fieldErrors: SubmissionFieldErrors): number 
     fieldErrors.primaryLanguage?.length ||
     fieldErrors.licenseSlug?.length
   ) {
+    return 0;
+  }
+  if (
+    fieldErrors.categoryIds?.length ||
+    fieldErrors.alternativeIds?.length
+  ) {
     return 1;
   }
-  return 2;
+  if (fieldErrors.ownershipVerified?.length) return 2;
+  return 3;
 }

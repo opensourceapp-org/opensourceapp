@@ -6,13 +6,18 @@ import { ModeratorFeedbackBanner } from "@/components/moderator-feedback-banner"
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/states/empty-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { SubmissionDeleteButton } from "@/components/submission-delete-button";
+import { visibleSubmissionStatuses } from "@/lib/applications/submission-queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await requireAuth("/dashboard");
   const submissions = await prisma.submission.findMany({
-    where: { userId: session.user.id },
+    where: {
+      userId: session.user.id,
+      status: { in: visibleSubmissionStatuses },
+    },
     orderBy: { updatedAt: "desc" },
     include: { application: true },
   });
@@ -117,6 +122,10 @@ export default async function DashboardPage() {
                           View listing
                         </Link>
                       )}
+                      <SubmissionDeleteButton
+                        submissionId={s.id}
+                        submissionName={s.name}
+                      />
                     </div>
                   </div>
                   {showFeedback && (

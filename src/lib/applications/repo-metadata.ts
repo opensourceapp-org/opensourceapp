@@ -89,6 +89,8 @@ async function fetchGitHubMetadata(
     forks_count: number;
     language: string | null;
     pushed_at: string | null;
+    private?: boolean;
+    archived?: boolean;
     license?: {
       key: string;
       name: string;
@@ -113,7 +115,7 @@ async function fetchGitHubMetadata(
     lastCommitAt: data.pushed_at,
     host: "github",
     ...license,
-    raw: { owner, repo },
+    raw: { owner, repo, private: data.private ?? false, archived: data.archived ?? false },
   });
 }
 
