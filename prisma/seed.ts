@@ -3,16 +3,23 @@ import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient, UserRole } from "../src/generated/prisma/client";
+import { slugify } from "../src/lib/utils";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+type CategorySeedRow = { name: string; sortOrder: number };
 type CategorySeed = { slug: string; name: string; sortOrder: number };
 
 function loadCategories(): CategorySeed[] {
   const path = join(process.cwd(), "prisma/data/categories.json");
-  return JSON.parse(readFileSync(path, "utf8")) as CategorySeed[];
+  const rows = JSON.parse(readFileSync(path, "utf8")) as CategorySeedRow[];
+  return rows.map((row) => ({
+    name: row.name,
+    sortOrder: row.sortOrder,
+    slug: slugify(row.name),
+  }));
 }
 
 async function main() {
@@ -143,7 +150,7 @@ async function main() {
       forks: 86,
       openIssuesCount: 12,
       primaryLanguage: "TypeScript",
-      categorySlug: "productivity",
+      categorySlug: "notetaking",
       platformSlugs: ["web", "linux", "macos"],
       licenseSlug: "mit",
       latestReleaseTag: "v1.8.2",
@@ -177,7 +184,7 @@ async function main() {
       stars: 890,
       forks: 112,
       primaryLanguage: "Go",
-      categorySlug: "infrastructure",
+      categorySlug: "cloud-storage",
       platformSlugs: ["linux", "docker"],
       licenseSlug: "gpl-3",
       latestReleaseTag: "v0.8.0",
