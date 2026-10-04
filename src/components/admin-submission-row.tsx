@@ -69,7 +69,13 @@ export function AdminSubmissionRow({ submission }: RowProps) {
         <div>
           <p className="font-medium">{submission.name}</p>
           <p className="text-sm text-muted-foreground">
-            {submission.user.name ?? submission.user.email}
+            {submission.user.name ? (
+              <>
+                {submission.user.name}
+                <span className="text-muted-foreground/80"> · </span>
+              </>
+            ) : null}
+            <span className="font-mono text-xs">{submission.user.email}</span>
           </p>
           <a
             href={submission.repositoryUrl}
