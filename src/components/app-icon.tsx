@@ -26,7 +26,7 @@ export function AppIcon({
     return (
       <Image
         src={logoUrl}
-        alt=""
+        alt={`${name} icon`}
         width={64}
         height={64}
         className={cn(
@@ -46,7 +46,8 @@ export function AppIcon({
         sizeMap[size],
         className,
       )}
-      aria-hidden
+      role="img"
+      aria-label={`${name} icon`}
     >
       {initial}
     </div>

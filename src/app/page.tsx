@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppCard } from "@/components/app-card";
 import { HomeHeroSearch } from "@/components/home-hero-search";
+import { RecentUpdateRow } from "@/components/recent-update-row";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { searchPublishedApplications } from "@/lib/search/applications";
@@ -14,31 +15,38 @@ export default async function HomePage() {
   let recent: Awaited<
     ReturnType<typeof searchPublishedApplications>
   >["items"] = [];
+  let newest: Awaited<
+    ReturnType<typeof searchPublishedApplications>
+  >["items"] = [];
   let categories: { slug: string; name: string }[] = [];
 
   try {
-    const [featuredResult, recentResult, categoryRows] = await Promise.all([
-      searchPublishedApplications({ limit: 6, sort: "stars" }),
-      searchPublishedApplications({ limit: 6, sort: "updated" }),
-      prisma.category.findMany({
-        orderBy: { sortOrder: "asc" },
-        take: 8,
-        select: { slug: true, name: true },
-      }),
-    ]);
+    const [featuredResult, recentResult, newestResult, categoryRows] =
+      await Promise.all([
+        searchPublishedApplications({ limit: 6, sort: "stars" }),
+        searchPublishedApplications({ limit: 6, sort: "updated" }),
+        searchPublishedApplications({ limit: 6, sort: "new" }),
+        prisma.category.findMany({
+          orderBy: { sortOrder: "asc" },
+          take: 8,
+          select: { slug: true, name: true },
+        }),
+      ]);
     featured = featuredResult.items;
     recent = recentResult.items;
+    newest = newestResult.items;
     categories = categoryRows;
   } catch {
     featured = [];
     recent = [];
+    newest = [];
     categories = [];
   }
 
   return (
-    <div className="space-y-16 md:space-y-20">
-      <section className="space-y-8 pt-4 md:pt-8">
-        <div className="mx-auto max-w-3xl space-y-4 text-center">
+    <div className="space-y-14 md:space-y-16">
+      <section className="space-y-6 pt-2 md:pt-4">
+        <div className="mx-auto max-w-3xl space-y-3 text-center">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">
             Open-source discovery
           </p>
@@ -65,7 +73,7 @@ export default async function HomePage() {
 
       {categories.length > 0 && (
         <section className="space-y-4">
-          <h2 className="font-display text-2xl font-normal">Explore categories</h2>
+          <h2 className="font-display text-2xl font-normal">Popular categories</h2>
           <div className="flex flex-wrap gap-2">
             {categories.map((c) => (
               <Link
@@ -83,7 +91,7 @@ export default async function HomePage() {
       {featured.length > 0 && (
         <section className="space-y-5">
           <div className="flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl font-normal">Popular</h2>
+            <h2 className="font-display text-2xl font-normal">Popular applications</h2>
             <Link
               href="/apps?sort=stars"
               className="text-sm text-primary hover:underline"
@@ -93,19 +101,7 @@ export default async function HomePage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((app) => (
-              <AppCard
-                key={app.id}
-                slug={app.slug}
-                name={app.name}
-                tagline={app.tagline}
-                logoUrl={app.logoUrl}
-                primaryLanguage={app.primaryLanguage}
-                stars={app.stars}
-                categories={app.categories}
-                platforms={app.platforms}
-                licenses={app.licenses}
-                verified={app.signals.length > 0}
-              />
+              <AppCard key={app.id} {...appCardProps(app)} />
             ))}
           </div>
         </section>
@@ -122,21 +118,27 @@ export default async function HomePage() {
               See more
             </Link>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-3 sm:grid-cols-2">
             {recent.map((app) => (
-              <AppCard
-                key={app.id}
-                slug={app.slug}
-                name={app.name}
-                tagline={app.tagline}
-                logoUrl={app.logoUrl}
-                primaryLanguage={app.primaryLanguage}
-                stars={app.stars}
-                categories={app.categories}
-                platforms={app.platforms}
-                licenses={app.licenses}
-                verified={app.signals.length > 0}
-              />
+              <li key={app.id}>
+                <RecentUpdateRow app={app} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {newest.length > 0 && (
+        <section className="space-y-5">
+          <div className="space-y-1">
+            <h2 className="font-display text-2xl font-normal">New & noteworthy</h2>
+            <p className="text-sm text-muted-foreground">
+              Recently added to OpenSourceApp
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {newest.map((app) => (
+              <AppCard key={app.id} {...appCardProps(app)} />
             ))}
           </div>
         </section>
@@ -156,4 +158,25 @@ export default async function HomePage() {
       </section>
     </div>
   );
+}
+
+function appCardProps(
+  app: Awaited<ReturnType<typeof searchPublishedApplications>>["items"][number],
+) {
+  return {
+    slug: app.slug,
+    name: app.name,
+    tagline: app.tagline,
+    logoUrl: app.logoUrl,
+    primaryLanguage: app.primaryLanguage,
+    stars: app.stars,
+    updatedAt: app.updatedAt,
+    latestReleaseTag: app.latestReleaseTag,
+    latestReleaseAt: app.latestReleaseAt,
+    lastCommitAt: app.lastCommitAt,
+    categories: app.categories,
+    platforms: app.platforms,
+    licenses: app.licenses,
+    signals: app.signals,
+  };
 }
