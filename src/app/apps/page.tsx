@@ -87,18 +87,18 @@ export default async function AppsBrowsePage({
         licenses={licenses}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{result.total}</span>{" "}
-          app{result.total === 1 ? "" : "s"}
-          {params.q ? (
-            <>
-              {" "}
-              matching &ldquo;{params.q}&rdquo;
-            </>
-          ) : null}
-        </p>
-      </div>
+      <p className="text-sm tabular-nums text-muted-foreground">
+        <span className="font-display text-lg font-normal text-foreground">
+          {result.total}
+        </span>{" "}
+        {result.total === 1 ? "app" : "apps"}
+        {params.q ? (
+          <>
+            {" "}
+            matching &ldquo;{params.q}&rdquo;
+          </>
+        ) : null}
+      </p>
 
       {result.items.length === 0 ? (
         <EmptyState
