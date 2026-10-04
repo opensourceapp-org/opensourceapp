@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma";
 
-export type ApplicationSort = "stars" | "name" | "updated";
+export type ApplicationSort = "stars" | "name" | "updated" | "new";
 
 export type ApplicationSearchFilters = {
   q?: string;
@@ -58,7 +58,9 @@ export async function searchPublishedApplications(
       ? [{ name: "asc" }]
       : sort === "updated"
         ? [{ updatedAt: "desc" }, { name: "asc" }]
-        : [{ stars: "desc" }, { name: "asc" }];
+        : sort === "new"
+          ? [{ publishedAt: "desc" }, { name: "asc" }]
+          : [{ stars: "desc" }, { name: "asc" }];
 
   const [items, total] = await Promise.all([
     prisma.application.findMany({

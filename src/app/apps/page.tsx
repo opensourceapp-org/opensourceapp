@@ -24,7 +24,7 @@ type SearchParams = Promise<{
 }>;
 
 function parseSort(value?: string): ApplicationSort {
-  if (value === "name" || value === "updated") return value;
+  if (value === "name" || value === "updated" || value === "new") return value;
   return "stars";
 }
 
@@ -122,10 +122,14 @@ export default async function AppsBrowsePage({
                 logoUrl={app.logoUrl}
                 primaryLanguage={app.primaryLanguage}
                 stars={app.stars}
+                updatedAt={app.updatedAt}
+                latestReleaseTag={app.latestReleaseTag}
+                latestReleaseAt={app.latestReleaseAt}
+                lastCommitAt={app.lastCommitAt}
                 categories={app.categories}
                 platforms={app.platforms}
                 licenses={app.licenses}
-                verified={app.signals.length > 0}
+                signals={app.signals}
               />
             ))}
           </div>

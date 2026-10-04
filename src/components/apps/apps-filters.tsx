@@ -111,6 +111,7 @@ function FilterFields({
         >
           <option value="stars">Popularity</option>
           <option value="updated">Recently updated</option>
+          <option value="new">Newly added</option>
           <option value="name">Name (A–Z)</option>
         </select>
       </div>

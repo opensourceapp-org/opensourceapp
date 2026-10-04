@@ -30,6 +30,11 @@ enum VerificationSignalType {
   PACKAGE_REGISTRY
   SECURITY_AUDIT
   COMMUNITY_ENDORSEMENT
+  SOURCE_REPOSITORY
+  LICENSE
+  RELEASE
+  MAINTAINER
+  DOMAIN
 }
 
 enum VerificationSignalStatus {
@@ -139,9 +144,13 @@ model Application {
   defaultBranch    String?
   stars            Int?
   forks            Int?
+  openIssuesCount  Int?
   lastCommitAt     DateTime?
   primaryLanguage  String?
   logoUrl          String?
+  latestReleaseTag String?
+  latestReleaseAt  DateTime?
+  latestReleaseUrl String?
   publishedAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
