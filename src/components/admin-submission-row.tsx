@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { moderateSubmissionAction } from "@/server/actions/admin";
-import {
-  MODERATOR_FEEDBACK_MAX,
-  MODERATOR_FEEDBACK_MIN,
-} from "@/lib/validation/moderation";
 
 type ModerationStatus =
   | "UNDER_REVIEW"
@@ -30,46 +27,41 @@ type RowProps = {
 };
 
 export function AdminSubmissionRow({ submission }: RowProps) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [feedbackAction, setFeedbackAction] = useState<FeedbackAction | null>(
     null,
   );
-  const [feedback, setFeedback] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  function act(status: ModerationStatus, notes?: string) {
+  const status = submission.status;
+  const canStartReview = status === "SUBMITTED";
+  const canDecide = status === "UNDER_REVIEW";
+  const awaitingResubmit = status === "CHANGES_REQUESTED";
+
+  function act(status: ModerationStatus, reviewerNotes?: string) {
     setError(null);
     startTransition(async () => {
       const res = await moderateSubmissionAction(
         submission.id,
         status,
-        notes,
+        reviewerNotes,
       );
       if (res.error) {
         setError(res.error);
         return;
       }
       setFeedbackAction(null);
-      setFeedback("");
+      setMessage("");
+      router.refresh();
     });
   }
 
   function submitFeedback() {
-    const trimmed = feedback.trim();
-    if (trimmed.length < MODERATOR_FEEDBACK_MIN) {
-      setError(
-        `Enter at least ${MODERATOR_FEEDBACK_MIN} characters of feedback for the submitter.`,
-      );
-      return;
-    }
     if (!feedbackAction) return;
-    act(feedbackAction, trimmed);
+    act(feedbackAction, message);
   }
-
-  const feedbackLabel =
-    feedbackAction === "REJECTED"
-      ? "Reason for rejection"
-      : "Changes requested";
 
   return (
     <li className="rounded-lg border p-4">
@@ -93,22 +85,25 @@ export function AdminSubmissionRow({ submission }: RowProps) {
 
       {feedbackAction ? (
         <div className="mt-4 space-y-3 rounded-lg border border-border bg-surface-muted p-4">
-          <div className="space-y-2">
-            <Label htmlFor={`feedback-${submission.id}`}>{feedbackLabel}</Label>
-            <Textarea
-              id={`feedback-${submission.id}`}
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              rows={4}
-              maxLength={MODERATOR_FEEDBACK_MAX}
-              placeholder="Explain what the submitter should fix or why this was rejected."
-              disabled={pending}
-            />
-            <p className="text-xs text-muted-foreground">
-              Required ({MODERATOR_FEEDBACK_MIN}–{MODERATOR_FEEDBACK_MAX}{" "}
-              characters). The submitter will see this in their dashboard.
+          <div>
+            <Label htmlFor={`feedback-${submission.id}`}>
+              Message to submitter
+              {feedbackAction === "CHANGES_REQUESTED"
+                ? " (required)"
+                : " — rejection reason (required)"}
+            </Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              This appears on their dashboard. Be specific about what to change.
             </p>
           </div>
+          <Textarea
+            id={`feedback-${submission.id}`}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            placeholder="e.g. Add an SPDX license identifier, fix the homepage URL, and expand the description to explain what the app does."
+            disabled={pending}
+          />
           {error && (
             <p className="text-sm text-destructive" role="alert">{error}</p>
           )}
@@ -121,9 +116,9 @@ export function AdminSubmissionRow({ submission }: RowProps) {
               disabled={pending}
               onClick={submitFeedback}
             >
-              {feedbackAction === "REJECTED"
-                ? "Confirm rejection"
-                : "Send change request"}
+              {feedbackAction === "CHANGES_REQUESTED"
+                ? "Send change request"
+                : "Confirm rejection"}
             </Button>
             <Button
               size="sm"
@@ -131,7 +126,7 @@ export function AdminSubmissionRow({ submission }: RowProps) {
               disabled={pending}
               onClick={() => {
                 setFeedbackAction(null);
-                setFeedback("");
+                setMessage("");
                 setError(null);
               }}
             >
@@ -141,46 +136,56 @@ export function AdminSubmissionRow({ submission }: RowProps) {
         </div>
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={pending}
-            onClick={() => act("UNDER_REVIEW")}
-          >
-            Start review
-          </Button>
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={() => act("APPROVED")}
-          >
-            Approve
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={pending}
-            onClick={() => {
-              setError(null);
-              setFeedbackAction("CHANGES_REQUESTED");
-            }}
-          >
-            Request changes
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={pending}
-            onClick={() => {
-              setError(null);
-              setFeedbackAction("REJECTED");
-            }}
-          >
-            Reject
-          </Button>
+          {canStartReview && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={pending}
+              onClick={() => act("UNDER_REVIEW")}
+            >
+              Start review
+            </Button>
+          )}
+          {canDecide && (
+            <>
+              <Button
+                size="sm"
+                disabled={pending}
+                onClick={() => act("APPROVED")}
+              >
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => {
+                  setFeedbackAction("CHANGES_REQUESTED");
+                  setError(null);
+                }}
+              >
+                Request changes
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={pending}
+                onClick={() => {
+                  setFeedbackAction("REJECTED");
+                  setError(null);
+                }}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          {awaitingResubmit && (
+            <p className="text-sm text-muted-foreground">
+              Waiting for the submitter to update and resubmit.
+            </p>
+          )}
         </div>
       )}
-
       {!feedbackAction && error && (
         <p className="mt-2 text-sm text-destructive" role="alert">{error}</p>
       )}
