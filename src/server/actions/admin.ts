@@ -36,6 +36,10 @@ export async function moderateSubmissionAction(
   });
   if (!submission) return { error: "Not found" };
 
+  if (submission.status === nextStatus) {
+    return { ok: true };
+  }
+
   try {
     assertSubmissionTransition(
       submission.status as SubmissionStatusType,

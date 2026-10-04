@@ -24,7 +24,7 @@ export function canTransitionSubmission(
   from: SubmissionStatus,
   to: SubmissionStatus,
 ): boolean {
-  if (from === to) return true;
+  if (from === to) return false;
   return transitions[from]?.includes(to) ?? false;
 }
 

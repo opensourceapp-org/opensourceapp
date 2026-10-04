@@ -18,4 +18,10 @@ describe("submission status machine", () => {
       assertSubmissionTransition("REJECTED", "APPROVED"),
     ).toThrow(/Invalid submission transition/);
   });
+
+  it("disallows no-op transitions", () => {
+    expect(canTransitionSubmission("UNDER_REVIEW", "UNDER_REVIEW")).toBe(
+      false,
+    );
+  });
 });
