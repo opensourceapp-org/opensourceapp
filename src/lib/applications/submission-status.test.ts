@@ -24,4 +24,8 @@ describe("submission status machine", () => {
       false,
     );
   });
+
+  it("allows soft delete from draft", () => {
+    expect(canTransitionSubmission("DRAFT", "DELETED")).toBe(true);
+  });
 });

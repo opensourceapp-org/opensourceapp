@@ -4,20 +4,23 @@ export type SubmissionStatus =
   | "UNDER_REVIEW"
   | "APPROVED"
   | "REJECTED"
-  | "CHANGES_REQUESTED";
+  | "CHANGES_REQUESTED"
+  | "DELETED";
 
 const transitions: Record<SubmissionStatus, SubmissionStatus[]> = {
-  DRAFT: ["SUBMITTED"],
+  DRAFT: ["SUBMITTED", "DELETED"],
   SUBMITTED: [
     "UNDER_REVIEW",
     "APPROVED",
     "REJECTED",
     "CHANGES_REQUESTED",
+    "DELETED",
   ],
-  UNDER_REVIEW: ["APPROVED", "REJECTED", "CHANGES_REQUESTED"],
-  CHANGES_REQUESTED: ["SUBMITTED"],
-  APPROVED: [],
-  REJECTED: [],
+  UNDER_REVIEW: ["APPROVED", "REJECTED", "CHANGES_REQUESTED", "DELETED"],
+  CHANGES_REQUESTED: ["SUBMITTED", "DELETED"],
+  APPROVED: ["DELETED"],
+  REJECTED: ["DELETED"],
+  DELETED: [],
 };
 
 export function canTransitionSubmission(

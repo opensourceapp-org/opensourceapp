@@ -22,4 +22,14 @@ describe("submission validation", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("limits categories to three", () => {
+    const result = submissionFormSchema.safeParse({
+      name: "Test App",
+      description: "A long enough description for validation.",
+      repositoryUrl: "https://github.com/a/b",
+      categoryIds: ["1", "2", "3", "4"],
+    });
+    expect(result.success).toBe(false);
+  });
 });

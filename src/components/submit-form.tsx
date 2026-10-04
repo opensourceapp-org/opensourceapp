@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { detectRepoHost, repoHostLabel } from "@/lib/repo-host";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RepositoryBadge } from "@/components/badges/repository-badge";
+import { EntitySearchCombobox, type EntityOption } from "@/components/entity-search-combobox";
+import { RepositoryVerificationPanel } from "@/components/repository-verification-panel";
 import {
-  createSubmissionFromRepoAction,
+  createPendingCategoryAction,
+  searchCategoriesAction,
+} from "@/server/actions/categories";
+import {
+  createPendingSoftwareAction,
+  searchSoftwareAction,
+} from "@/server/actions/software";
+import {
+  ensureSubmissionDraftAction,
   fetchRepoMetadataAction,
+  saveSubmissionAction,
 } from "@/server/actions/submissions";
 import {
   isSubmissionFieldErrors,
@@ -20,7 +31,7 @@ import {
 } from "@/lib/validation/submission-errors";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["Repository", "Details", "Confirm"] as const;
+const STEPS = ["App info", "Categories", "Verification", "Review"] as const;
 
 type LicenseOption = { slug: string; name: string; spdxId: string | null };
 
@@ -77,8 +88,17 @@ function isAutoFetchableRepoUrl(url: string): boolean {
   }
 }
 
-export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
+export function SubmitForm({
+  licenses,
+  initialSubmissionId,
+}: {
+  licenses: LicenseOption[];
+  initialSubmissionId?: string;
+}) {
   const [step, setStep] = useState(0);
+  const [submissionId, setSubmissionId] = useState<string | null>(
+    initialSubmissionId ?? null,
+  );
   const [repositoryUrl, setRepositoryUrl] = useState("");
   const [name, setName] = useState("");
   const [tagline, setTagline] = useState("");
@@ -86,12 +106,60 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
   const [homepageUrl, setHomepageUrl] = useState("");
   const [primaryLanguage, setPrimaryLanguage] = useState("");
   const [licenseSlug, setLicenseSlug] = useState("");
+  const [categories, setCategories] = useState<EntityOption[]>([]);
+  const [alternatives, setAlternatives] = useState<EntityOption[]>([]);
+  const [ownershipVerified, setOwnershipVerified] = useState(false);
   const [metadataConfirmed, setMetadataConfirmed] = useState(false);
   const [repoMetadata, setRepoMetadata] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SubmissionFieldErrors>({});
   const [pending, startTransition] = useTransition();
   const lastFetchedUrlRef = useRef("");
+
+  const searchCategories = useCallback(async (query: string) => {
+    const res = await searchCategoriesAction(query);
+    if (res.error) return { error: res.error };
+    return {
+      data: res.data!.map((c) => ({
+        id: c.id,
+        name: c.name,
+        status: c.status,
+      })),
+    };
+  }, []);
+
+  const searchSoftware = useCallback(async (query: string) => {
+    const res = await searchSoftwareAction(query);
+    if (res.error) return { error: res.error };
+    return {
+      data: res.data!.map((s) => ({
+        id: s.id,
+        name: s.name,
+        status: s.status,
+      })),
+    };
+  }, []);
+
+  function formPayload(submit: boolean) {
+    return {
+      name,
+      tagline,
+      description,
+      homepageUrl,
+      repositoryUrl,
+      primaryLanguage,
+      licenseSlug,
+      categoryIds: categories.map((c) => c.id),
+      alternativeIds: alternatives.map((a) => a.id),
+      submit,
+      repoMetadataJson: {
+        ...(repoMetadata && typeof repoMetadata === "object"
+          ? (repoMetadata as Record<string, unknown>)
+          : {}),
+        licenseSlug: licenseSlug || undefined,
+      },
+    };
+  }
 
   function clearErrors() {
     setError(null);
@@ -123,7 +191,7 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
     setMetadataConfirmed(false);
   }
 
-  function fetchMetadata(advanceToDetails: boolean) {
+  function fetchMetadata() {
     clearErrors();
     startTransition(async () => {
       const res = await fetchRepoMetadataAction(repositoryUrl);
@@ -134,9 +202,6 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
       const data = res.data!;
       lastFetchedUrlRef.current = repositoryUrl;
       applyFetchedMetadata(data);
-      if (advanceToDetails) {
-        setStep(1);
-      }
     });
   }
 
@@ -152,39 +217,40 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
         const data = res.data!;
         lastFetchedUrlRef.current = repositoryUrl;
         applyFetchedMetadata(data);
-        setStep(1);
       });
     }, 700);
 
     return () => window.clearTimeout(timer);
   }, [repositoryUrl]);
 
-  function save(submit: boolean) {
+  function persistDraft(andAdvance: number | null) {
     clearErrors();
-    const mergedMetadata = {
-      ...(repoMetadata && typeof repoMetadata === "object"
-        ? (repoMetadata as Record<string, unknown>)
-        : {}),
-      licenseSlug: licenseSlug || undefined,
-    };
     startTransition(async () => {
-      const res = await createSubmissionFromRepoAction(
-        repositoryUrl,
-        mergedMetadata,
-        {
-          name,
-          tagline,
-          description,
-          homepageUrl,
-          primaryLanguage,
-          licenseSlug,
-          submit,
-        },
+      const res = await ensureSubmissionDraftAction(
+        formPayload(false),
+        submissionId ?? undefined,
       );
       if (res.error) {
         applyActionError(res.error);
         return;
       }
+      if (res.id) setSubmissionId(res.id);
+      if (andAdvance !== null) setStep(andAdvance);
+    });
+  }
+
+  function save(submit: boolean) {
+    clearErrors();
+    startTransition(async () => {
+      const res = await saveSubmissionAction(
+        formPayload(submit),
+        submissionId ?? undefined,
+      );
+      if (res.error) {
+        applyActionError(res.error);
+        return;
+      }
+      if (res.id) setSubmissionId(res.id);
       window.location.href = "/dashboard";
     });
   }
@@ -217,86 +283,45 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
       {step === 0 && (
         <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
           <div>
-            <h2 className="font-display text-xl font-medium">Repository URL</h2>
+            <h2 className="font-display text-xl font-medium">App information</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Paste a GitHub or GitLab URL — we fetch metadata and detect the
-              open-source license automatically.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="repositoryUrl">Source repository</Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="repositoryUrl"
-                value={repositoryUrl}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setRepositoryUrl(next);
-                  if (next !== lastFetchedUrlRef.current) {
-                    setRepoMetadata(null);
-                  }
-                }}
-                placeholder="https://github.com/org/project"
-                aria-invalid={Boolean(fieldErrors.repositoryUrl)}
-                aria-describedby={
-                  fieldErrors.repositoryUrl ? "repositoryUrl-error" : undefined
-                }
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => fetchMetadata(true)}
-                disabled={pending || !repositoryUrl}
-              >
-                {pending ? "Fetching…" : "Fetch metadata"}
-              </Button>
-            </div>
-            {pending && isAutoFetchableRepoUrl(repositoryUrl) && (
-              <p className="text-xs text-muted-foreground">
-                Fetching repository metadata and license…
-              </p>
-            )}
-            {host && host !== "other" && (
-              <RepositoryBadge url={repositoryUrl} />
-            )}
-            {licenseSlug && step === 0 && (
-              <p className="text-xs text-muted-foreground">
-                Detected license:{" "}
-                <span className="font-medium text-foreground">
-                  {selectedLicense?.name ?? licenseSlug}
-                </span>
-              </p>
-            )}
-            {host === "other" && repositoryUrl && (
-              <p className="text-xs text-muted-foreground">
-                Supported hosts: GitHub, GitLab, Codeberg. Other URLs may still
-                work if metadata is reachable.
-              </p>
-            )}
-            <FieldError
-              id="repositoryUrl-error"
-              messages={fieldErrors.repositoryUrl}
-            />
-          </div>
-          {Object.keys(fieldErrors).length > 0 && step === 0 && (
-            <ValidationSummary fieldErrors={fieldErrors} />
-          )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </section>
-      )}
-
-      {step === 1 && repoMetadata !== null && (
-        <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
-          <div>
-            <h2 className="font-display text-xl font-medium">Listing details</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Edit anything that should appear on the public directory page.
+              Tell us about the project and where its source code lives.
             </p>
           </div>
           {Object.keys(fieldErrors).length > 0 && (
             <ValidationSummary fieldErrors={fieldErrors} />
           )}
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="repositoryUrl">Repository URL</Label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="repositoryUrl"
+                  value={repositoryUrl}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setRepositoryUrl(next);
+                    if (next !== lastFetchedUrlRef.current) {
+                      setRepoMetadata(null);
+                    }
+                  }}
+                  placeholder="https://github.com/org/project"
+                  aria-invalid={Boolean(fieldErrors.repositoryUrl)}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={fetchMetadata}
+                  disabled={pending || !repositoryUrl}
+                >
+                  {pending ? "Fetching…" : "Fetch metadata"}
+                </Button>
+              </div>
+              {host && host !== "other" && (
+                <RepositoryBadge url={repositoryUrl} />
+              )}
+              <FieldError messages={fieldErrors.repositoryUrl} />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -307,6 +332,17 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
                 aria-invalid={Boolean(fieldErrors.name)}
               />
               <FieldError messages={fieldErrors.name} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="homepageUrl">Website</Label>
+              <Input
+                id="homepageUrl"
+                value={homepageUrl}
+                onChange={(e) => setHomepageUrl(e.target.value)}
+                placeholder="https://example.com"
+                aria-invalid={Boolean(fieldErrors.homepageUrl)}
+              />
+              <FieldError messages={fieldErrors.homepageUrl} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="tagline">Tagline</Label>
@@ -337,7 +373,6 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
                 value={licenseSlug}
                 onChange={(e) => setLicenseSlug(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-invalid={Boolean(fieldErrors.licenseSlug)}
               >
                 <option value="">Select a license (optional)</option>
                 {licenses.map((l) => (
@@ -347,40 +382,94 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground">
-                Pre-filled from the repository when we can match it to our
-                license list.
-              </p>
               <FieldError messages={fieldErrors.licenseSlug} />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="homepageUrl">Homepage</Label>
-                <Input
-                  id="homepageUrl"
-                  value={homepageUrl}
-                  onChange={(e) => setHomepageUrl(e.target.value)}
-                  aria-invalid={Boolean(fieldErrors.homepageUrl)}
-                />
-                <FieldError messages={fieldErrors.homepageUrl} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="primaryLanguage">Primary language</Label>
-                <Input
-                  id="primaryLanguage"
-                  value={primaryLanguage}
-                  onChange={(e) => setPrimaryLanguage(e.target.value)}
-                  aria-invalid={Boolean(fieldErrors.primaryLanguage)}
-                />
-                <FieldError messages={fieldErrors.primaryLanguage} />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="primaryLanguage">Primary language</Label>
+              <Input
+                id="primaryLanguage"
+                value={primaryLanguage}
+                onChange={(e) => setPrimaryLanguage(e.target.value)}
+              />
             </div>
           </div>
-          <div className="flex justify-between gap-2 pt-2">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              disabled={pending || !repositoryUrl || !name || !description}
+              onClick={() => persistDraft(1)}
+            >
+              Continue
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {step === 1 && (
+        <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
+          <div>
+            <h2 className="font-display text-xl font-medium">
+              Categories & alternatives
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Help people discover your app and similar software.
+            </p>
+          </div>
+          {Object.keys(fieldErrors).length > 0 && (
+            <ValidationSummary fieldErrors={fieldErrors} />
+          )}
+          <EntitySearchCombobox
+            label="Categories"
+            description="Choose up to 3 categories. New categories are reviewed by moderators."
+            maxItems={3}
+            selected={categories}
+            onSelectedChange={setCategories}
+            onSearch={searchCategories}
+            onCreate={async (name) => {
+              const res = await createPendingCategoryAction(name);
+              if (res.error) return { error: res.error };
+              return {
+                data: {
+                  id: res.data!.id,
+                  name: res.data!.name,
+                  status: res.data!.status,
+                },
+              };
+            }}
+            createLabel="Create category"
+            error={fieldErrors.categoryIds?.[0]}
+          />
+          <EntitySearchCombobox
+            label="Alternatives"
+            description="Optional — similar or competing tools (pending entries are reviewed)."
+            maxItems={10}
+            selected={alternatives}
+            onSelectedChange={setAlternatives}
+            onSearch={searchSoftware}
+            onCreate={async (name) => {
+              const res = await createPendingSoftwareAction(name);
+              if (res.error) return { error: res.error };
+              return {
+                data: {
+                  id: res.data!.id,
+                  name: res.data!.name,
+                  status: res.data!.status,
+                },
+              };
+            }}
+            createLabel="Create alternative"
+            error={fieldErrors.alternativeIds?.[0]}
+          />
+          <div className="flex justify-between gap-2">
             <Button type="button" variant="ghost" onClick={() => setStep(0)}>
               Back
             </Button>
-            <Button type="button" onClick={() => setStep(2)}>
+            <Button
+              type="button"
+              disabled={pending || categories.length === 0}
+              onClick={() => persistDraft(2)}
+            >
               Continue
             </Button>
           </div>
@@ -390,7 +479,37 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
       {step === 2 && (
         <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
           <div>
-            <h2 className="font-display text-xl font-medium">Confirm & submit</h2>
+            <h2 className="font-display text-xl font-medium">
+              Repository verification
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Prove you control the repository before submitting for review.
+            </p>
+          </div>
+          <RepositoryVerificationPanel
+            submissionId={submissionId}
+            onVerifiedChange={setOwnershipVerified}
+          />
+          <FieldError messages={fieldErrors.ownershipVerified} />
+          <div className="flex justify-between gap-2">
+            <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+              Back
+            </Button>
+            <Button
+              type="button"
+              disabled={!ownershipVerified || pending}
+              onClick={() => setStep(3)}
+            >
+              Continue
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {step === 3 && (
+        <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
+          <div>
+            <h2 className="font-display text-xl font-medium">Review & submit</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Save a draft to finish later, or send for moderator review.
             </p>
@@ -404,6 +523,12 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
               <dt className="text-muted-foreground">Repository</dt>
               <dd className="truncate font-mono text-xs">{repositoryUrl}</dd>
             </div>
+            {homepageUrl && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Website</dt>
+                <dd className="truncate text-xs">{homepageUrl}</dd>
+              </div>
+            )}
             {selectedLicense && (
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">License</dt>
@@ -416,6 +541,24 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
                 <dd>{repoHostLabel(host)}</dd>
               </div>
             )}
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Categories</dt>
+              <dd className="text-right">
+                {categories.map((c) => c.name).join(", ")}
+              </dd>
+            </div>
+            {alternatives.length > 0 && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Alternatives</dt>
+                <dd className="text-right">
+                  {alternatives.map((a) => a.name).join(", ")}
+                </dd>
+              </div>
+            )}
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Ownership</dt>
+              <dd>{ownershipVerified ? "Verified" : "Not verified"}</dd>
+            </div>
           </dl>
           <label className="flex items-start gap-3 text-sm">
             <Checkbox
@@ -423,15 +566,17 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
               onCheckedChange={(v) => setMetadataConfirmed(v === true)}
               className="mt-0.5"
             />
-            <span>I confirm this information is accurate and I have rights to
-              submit this listing.</span>
+            <span>
+              I confirm this information is accurate and I have rights to submit
+              this listing.
+            </span>
           </label>
           {Object.keys(fieldErrors).length > 0 && (
             <ValidationSummary fieldErrors={fieldErrors} />
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex flex-wrap justify-between gap-2">
-            <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+            <Button type="button" variant="ghost" onClick={() => setStep(2)}>
               Back
             </Button>
             <div className="flex flex-wrap gap-2">
@@ -445,7 +590,9 @@ export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
               </Button>
               <Button
                 type="button"
-                disabled={!metadataConfirmed || pending}
+                disabled={
+                  !metadataConfirmed || pending || !ownershipVerified
+                }
                 onClick={() => save(true)}
               >
                 Submit for review

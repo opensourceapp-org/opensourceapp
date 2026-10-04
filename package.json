@@ -36,6 +36,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^18.0.4",
+    "isomorphic-dompurify": "^2.26.0",
     "lucide-react": "^1.48.0",
     "next": "^15.2.4",
     "next-auth": "^5.0.0-beta.25",

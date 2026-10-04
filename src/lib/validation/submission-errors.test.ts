@@ -47,7 +47,9 @@ describe("submission field errors", () => {
 
   it("picks wizard step from invalid fields", () => {
     expect(submissionErrorStep({ repositoryUrl: ["bad"] })).toBe(0);
-    expect(submissionErrorStep({ description: ["short"] })).toBe(1);
-    expect(submissionErrorStep({})).toBe(2);
+    expect(submissionErrorStep({ description: ["short"] })).toBe(0);
+    expect(submissionErrorStep({ categoryIds: ["required"] })).toBe(1);
+    expect(submissionErrorStep({ ownershipVerified: ["required"] })).toBe(2);
+    expect(submissionErrorStep({})).toBe(3);
   });
 });

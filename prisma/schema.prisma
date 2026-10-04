@@ -22,6 +22,19 @@ enum SubmissionStatus {
   APPROVED
   REJECTED
   CHANGES_REQUESTED
+  DELETED
+}
+
+enum CategoryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SoftwareStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum VerificationSignalType {
@@ -35,6 +48,7 @@ enum VerificationSignalType {
   RELEASE
   MAINTAINER
   DOMAIN
+  REPOSITORY_OWNERSHIP
 }
 
 enum VerificationSignalStatus {
@@ -53,12 +67,16 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  submissions   Submission[]       @relation("SubmissionOwner")
-  applications  Application[]      @relation("ApplicationSubmitter")
-  auditLogs     AuditLog[]
-  signals       VerificationSignal[] @relation("SignalRecorder")
+  accounts                 Account[]
+  sessions                 Session[]
+  submissions              Submission[]              @relation("SubmissionOwner")
+  deletedSubmissions       Submission[]              @relation("SubmissionDeleter")
+  applications             Application[]             @relation("ApplicationSubmitter")
+  auditLogs                AuditLog[]
+  signals                  VerificationSignal[]      @relation("SignalRecorder")
+  createdCategories        Category[]                @relation("CategoryCreator")
+  createdSoftware          Software[]                @relation("SoftwareCreator")
+  repositoryVerifications  RepositoryVerification[]
 }
 
 model Account {
@@ -97,14 +115,34 @@ model VerificationToken {
 }
 
 model Category {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String         @id @default(cuid())
+  slug        String         @unique
   name        String
   description String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
+  sortOrder   Int            @default(0)
+  status      CategoryStatus @default(APPROVED)
+  createdById String?
+  createdBy   User?          @relation("CategoryCreator", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   applications ApplicationCategory[]
+  submissions  SubmissionCategory[]
+}
+
+model Software {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  name        String
+  websiteUrl  String?
+  status      SoftwareStatus @default(APPROVED)
+  createdById String?
+  createdBy   User?          @relation("SoftwareCreator", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  submissions  SubmissionSoftware[]
+  applications ApplicationSoftware[]
 }
 
 model Platform {
@@ -157,12 +195,13 @@ model Application {
   submittedById    String?
   submittedBy      User?     @relation("ApplicationSubmitter", fields: [submittedById], references: [id])
 
-  categories ApplicationCategory[]
-  platforms  ApplicationPlatform[]
-  licenses   ApplicationLicense[]
-  tags       ApplicationTag[]
-  signals    VerificationSignal[]
-  submission Submission?
+  categories   ApplicationCategory[]
+  platforms    ApplicationPlatform[]
+  licenses     ApplicationLicense[]
+  tags         ApplicationTag[]
+  signals      VerificationSignal[]
+  submission   Submission?
+  alternatives ApplicationSoftware[]
 }
 
 model ApplicationCategory {
@@ -172,6 +211,15 @@ model ApplicationCategory {
   category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@id([applicationId, categoryId])
+}
+
+model ApplicationSoftware {
+  applicationId String
+  softwareId    String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  software      Software    @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+
+  @@id([applicationId, softwareId])
 }
 
 model ApplicationPlatform {
@@ -202,30 +250,73 @@ model ApplicationTag {
 }
 
 model Submission {
-  id               String           @id @default(cuid())
-  userId           String
-  user             User             @relation("SubmissionOwner", fields: [userId], references: [id], onDelete: Cascade)
-  status           SubmissionStatus @default(DRAFT)
-  applicationId    String?          @unique
-  application      Application?     @relation(fields: [applicationId], references: [id])
-  name             String
-  tagline          String?
-  description      String           @db.Text
-  homepageUrl      String?
-  repositoryUrl    String
-  repositoryHost   String?
-  defaultBranch    String?
-  stars            Int?
-  forks            Int?
-  lastCommitAt     DateTime?
-  primaryLanguage  String?
-  repoMetadataJson Json?
-  reviewerNotes    String?          @db.Text
-  reviewedAt       DateTime?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                     String           @id @default(cuid())
+  userId                 String
+  user                   User             @relation("SubmissionOwner", fields: [userId], references: [id], onDelete: Cascade)
+  status                 SubmissionStatus @default(DRAFT)
+  applicationId          String?          @unique
+  application            Application?     @relation(fields: [applicationId], references: [id])
+  name                   String
+  tagline                String?
+  description            String           @db.Text
+  homepageUrl            String?
+  repositoryUrl          String
+  normalizedRepositoryUrl String?
+  repositoryHost         String?
+  defaultBranch          String?
+  stars                  Int?
+  forks                  Int?
+  lastCommitAt           DateTime?
+  primaryLanguage        String?
+  repoMetadataJson       Json?
+  reviewerNotes          String?          @db.Text
+  reviewedAt             DateTime?
+  deletedAt              DateTime?
+  deletedById            String?
+  deletedBy              User?            @relation("SubmissionDeleter", fields: [deletedById], references: [id])
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  categories              SubmissionCategory[]
+  alternatives            SubmissionSoftware[]
+  repositoryVerification  RepositoryVerification?
 
   @@index([status, createdAt])
+  @@index([userId])
+  @@index([normalizedRepositoryUrl])
+}
+
+model SubmissionCategory {
+  submissionId String
+  categoryId   String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, categoryId])
+}
+
+model SubmissionSoftware {
+  submissionId String
+  softwareId   String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  software     Software   @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, softwareId])
+}
+
+model RepositoryVerification {
+  id              String    @id @default(cuid())
+  submissionId    String    @unique
+  submission      Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash       String
+  verifiedAt      DateTime?
+  logoSvgSanitized String?  @db.Text
+  lastCheckedAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
   @@index([userId])
 }
 

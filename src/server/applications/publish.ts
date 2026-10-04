@@ -3,6 +3,13 @@ import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 import type { Submission } from "@/generated/prisma";
 
+function logoUrlFromSanitizedSvg(svg: string | null | undefined): string | null {
+  if (!svg) return null;
+  if (Buffer.byteLength(svg, "utf8") > 32_000) return null;
+  const base64 = Buffer.from(svg, "utf8").toString("base64");
+  return `data:image/svg+xml;base64,${base64}`;
+}
+
 async function uniqueSlug(base: string): Promise<string> {
   let slug = slugify(base);
   if (!slug) slug = "app";
@@ -17,6 +24,21 @@ async function uniqueSlug(base: string): Promise<string> {
 
 export async function publishSubmissionAsApplication(submission: Submission) {
   const slug = await uniqueSlug(submission.name);
+
+  const [submissionCategories, submissionAlternatives, verification] =
+    await Promise.all([
+      prisma.submissionCategory.findMany({
+        where: { submissionId: submission.id },
+        select: { categoryId: true },
+      }),
+      prisma.submissionSoftware.findMany({
+        where: { submissionId: submission.id },
+        select: { softwareId: true },
+      }),
+      prisma.repositoryVerification.findUnique({
+        where: { submissionId: submission.id },
+      }),
+    ]);
 
   const application = await prisma.$transaction(async (tx) => {
     const app = await tx.application.upsert({
@@ -34,6 +56,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         forks: submission.forks,
         lastCommitAt: submission.lastCommitAt,
         primaryLanguage: submission.primaryLanguage,
+        logoUrl: logoUrlFromSanitizedSvg(verification?.logoSvgSanitized),
         publishedAt: new Date(),
         submittedById: submission.userId,
       },
@@ -49,6 +72,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         forks: submission.forks,
         lastCommitAt: submission.lastCommitAt,
         primaryLanguage: submission.primaryLanguage,
+        logoUrl: logoUrlFromSanitizedSvg(verification?.logoSvgSanitized),
         publishedAt: new Date(),
       },
     });
@@ -68,6 +92,50 @@ export async function publishSubmissionAsApplication(submission: Submission) {
           data: { applicationId: app.id, licenseId: license.id },
         });
       }
+    }
+
+    await tx.applicationCategory.deleteMany({
+      where: { applicationId: app.id },
+    });
+    if (submissionCategories.length) {
+      await tx.applicationCategory.createMany({
+        data: submissionCategories.map((row) => ({
+          applicationId: app.id,
+          categoryId: row.categoryId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    await tx.applicationSoftware.deleteMany({
+      where: { applicationId: app.id },
+    });
+    if (submissionAlternatives.length) {
+      await tx.applicationSoftware.createMany({
+        data: submissionAlternatives.map((row) => ({
+          applicationId: app.id,
+          softwareId: row.softwareId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    if (verification?.verifiedAt) {
+      await tx.verificationSignal.deleteMany({
+        where: {
+          applicationId: app.id,
+          type: "REPOSITORY_OWNERSHIP",
+        },
+      });
+      await tx.verificationSignal.create({
+        data: {
+          applicationId: app.id,
+          type: "REPOSITORY_OWNERSHIP",
+          status: "ACTIVE",
+          summary: "Repository ownership verified via .opensourceapp/verification",
+          recordedById: submission.userId,
+        },
+      });
     }
 
     await tx.submission.update({
