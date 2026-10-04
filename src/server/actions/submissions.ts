@@ -3,10 +3,11 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { fetchRepositoryMetadata } from "@/lib/applications/repo-metadata";
+import { resolveLicenseSlugFromCatalog } from "@/lib/applications/license-match";
 import { rateLimit } from "@/lib/rate-limit";
 import { submissionFieldErrorsFromZod } from "@/lib/validation/submission-errors";
 import { submissionFormSchema } from "@/lib/validation/submission";
-import { SubmissionStatus } from "@/generated/prisma";
+import { Prisma, SubmissionStatus } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function fetchRepoMetadataAction(repositoryUrl: string) {
@@ -19,8 +20,22 @@ export async function fetchRepoMetadataAction(repositoryUrl: string) {
     return { error: "Rate limit exceeded. Try again shortly." };
   }
   try {
-    const metadata = await fetchRepositoryMetadata(repositoryUrl);
-    return { data: metadata };
+    const [metadata, licenses] = await Promise.all([
+      fetchRepositoryMetadata(repositoryUrl),
+      prisma.license.findMany({
+        orderBy: { name: "asc" },
+        select: { slug: true, spdxId: true, name: true },
+      }),
+    ]);
+    const licenseSlug = await resolveLicenseSlugFromCatalog(
+      {
+        spdxId: metadata.licenseSpdxId ?? null,
+        key: metadata.licenseKey ?? null,
+        name: metadata.licenseName ?? null,
+      },
+      licenses,
+    );
+    return { data: { ...metadata, licenseSlug } };
   } catch {
     return { error: "Could not fetch repository metadata" };
   }
@@ -61,6 +76,18 @@ export async function saveSubmissionAction(
       where: { id: submissionId, userId: session.user.id },
     });
     if (!existing) return { error: "Not found" };
+
+    const existingMeta: Record<string, unknown> =
+      existing.repoMetadataJson &&
+      typeof existing.repoMetadataJson === "object" &&
+      !Array.isArray(existing.repoMetadataJson)
+        ? { ...(existing.repoMetadataJson as Record<string, unknown>) }
+        : {};
+    if (data.licenseSlug) {
+      existingMeta.licenseSlug = data.licenseSlug;
+    } else {
+      delete existingMeta.licenseSlug;
+    }
     if (
       existing.status !== SubmissionStatus.DRAFT &&
       existing.status !== SubmissionStatus.CHANGES_REQUESTED
@@ -69,7 +96,10 @@ export async function saveSubmissionAction(
     }
     await prisma.submission.update({
       where: { id: submissionId },
-      data: payload,
+      data: {
+        ...payload,
+        repoMetadataJson: existingMeta as Prisma.InputJsonValue,
+      },
     });
     revalidatePath("/dashboard");
     return { id: submissionId, status };
@@ -100,6 +130,16 @@ export async function createSubmissionFromRepoAction(
 
   const meta = await fetchRepositoryMetadata(repositoryUrl).catch(() => null);
 
+  const baseMeta: Record<string, unknown> =
+    repoMetadataJson && typeof repoMetadataJson === "object"
+      ? { ...(repoMetadataJson as Record<string, unknown>) }
+      : meta
+        ? { ...(meta as Record<string, unknown>) }
+        : {};
+  if (parsed.data.licenseSlug) {
+    baseMeta.licenseSlug = parsed.data.licenseSlug;
+  }
+
   const created = await prisma.submission.create({
     data: {
       userId: session.user.id,
@@ -115,7 +155,7 @@ export async function createSubmissionFromRepoAction(
       lastCommitAt: meta?.lastCommitAt ? new Date(meta.lastCommitAt) : null,
       primaryLanguage:
         parsed.data.primaryLanguage || meta?.primaryLanguage || null,
-      repoMetadataJson: (repoMetadataJson ?? meta) as object,
+      repoMetadataJson: baseMeta as Prisma.InputJsonValue,
       status: parsed.data.submit
         ? SubmissionStatus.SUBMITTED
         : SubmissionStatus.DRAFT,

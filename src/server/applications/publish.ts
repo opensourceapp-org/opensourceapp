@@ -1,3 +1,4 @@
+import { licenseSlugFromRepoMetadataJson } from "@/lib/applications/repo-metadata";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 import type { Submission } from "@/generated/prisma";
@@ -51,6 +52,23 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         publishedAt: new Date(),
       },
     });
+
+    const licenseSlug = licenseSlugFromRepoMetadataJson(
+      submission.repoMetadataJson,
+    );
+    if (licenseSlug) {
+      const license = await tx.license.findUnique({
+        where: { slug: licenseSlug },
+      });
+      if (license) {
+        await tx.applicationLicense.deleteMany({
+          where: { applicationId: app.id },
+        });
+        await tx.applicationLicense.create({
+          data: { applicationId: app.id, licenseId: license.id },
+        });
+      }
+    }
 
     await tx.submission.update({
       where: { id: submission.id },

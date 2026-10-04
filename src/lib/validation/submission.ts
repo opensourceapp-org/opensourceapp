@@ -45,6 +45,11 @@ export const submissionFormSchema = z.object({
     .max(64, "Primary language must be at most 64 characters")
     .optional()
     .or(z.literal("")),
+  licenseSlug: z
+    .string()
+    .max(64, "Select a license from the list")
+    .optional()
+    .or(z.literal("")),
   submit: z.boolean().optional(),
 });
 
@@ -60,5 +65,8 @@ export const repoMetadataSchema = z.object({
   primaryLanguage: z.string().nullable(),
   lastCommitAt: z.string().nullable(),
   host: z.enum(["github", "gitlab", "unknown"]),
+  licenseSpdxId: z.string().nullable().optional(),
+  licenseKey: z.string().nullable().optional(),
+  licenseName: z.string().nullable().optional(),
   raw: z.record(z.string(), z.unknown()).optional(),
 });

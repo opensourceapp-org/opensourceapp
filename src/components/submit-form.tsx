@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { detectRepoHost, repoHostLabel } from "@/lib/repo-host";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,16 @@ import {
 import { cn } from "@/lib/utils";
 
 const STEPS = ["Repository", "Details", "Confirm"] as const;
+
+type LicenseOption = { slug: string; name: string; spdxId: string | null };
+
+type RepoMetadataWithLicense = {
+  name: string;
+  description: string | null;
+  homepageUrl: string | null;
+  primaryLanguage: string | null;
+  licenseSlug?: string | null;
+};
 
 function FieldError({
   id,
@@ -56,7 +66,18 @@ function ValidationSummary({ fieldErrors }: { fieldErrors: SubmissionFieldErrors
   );
 }
 
-export function SubmitForm() {
+function isAutoFetchableRepoUrl(url: string): boolean {
+  const host = detectRepoHost(url);
+  if (host !== "github" && host !== "gitlab") return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname.split("/").filter(Boolean).length >= 2;
+  } catch {
+    return false;
+  }
+}
+
+export function SubmitForm({ licenses }: { licenses: LicenseOption[] }) {
   const [step, setStep] = useState(0);
   const [repositoryUrl, setRepositoryUrl] = useState("");
   const [name, setName] = useState("");
@@ -64,11 +85,13 @@ export function SubmitForm() {
   const [description, setDescription] = useState("");
   const [homepageUrl, setHomepageUrl] = useState("");
   const [primaryLanguage, setPrimaryLanguage] = useState("");
+  const [licenseSlug, setLicenseSlug] = useState("");
   const [metadataConfirmed, setMetadataConfirmed] = useState(false);
   const [repoMetadata, setRepoMetadata] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SubmissionFieldErrors>({});
   const [pending, startTransition] = useTransition();
+  const lastFetchedUrlRef = useRef("");
 
   function clearErrors() {
     setError(null);
@@ -88,7 +111,19 @@ export function SubmitForm() {
 
   const host = repositoryUrl ? detectRepoHost(repositoryUrl) : null;
 
-  function loadMetadata() {
+  function applyFetchedMetadata(data: RepoMetadataWithLicense) {
+    setRepoMetadata(data);
+    setName(data.name);
+    setDescription(data.description ?? "");
+    setHomepageUrl(data.homepageUrl ?? "");
+    setPrimaryLanguage(data.primaryLanguage ?? "");
+    if (data.licenseSlug) {
+      setLicenseSlug(data.licenseSlug);
+    }
+    setMetadataConfirmed(false);
+  }
+
+  function fetchMetadata(advanceToDetails: boolean) {
     clearErrors();
     startTransition(async () => {
       const res = await fetchRepoMetadataAction(repositoryUrl);
@@ -97,28 +132,52 @@ export function SubmitForm() {
         return;
       }
       const data = res.data!;
-      setRepoMetadata(data);
-      setName(data.name);
-      setDescription(data.description ?? "");
-      setHomepageUrl(data.homepageUrl ?? "");
-      setPrimaryLanguage(data.primaryLanguage ?? "");
-      setMetadataConfirmed(false);
-      setStep(1);
+      lastFetchedUrlRef.current = repositoryUrl;
+      applyFetchedMetadata(data);
+      if (advanceToDetails) {
+        setStep(1);
+      }
     });
   }
 
+  useEffect(() => {
+    if (!isAutoFetchableRepoUrl(repositoryUrl)) return;
+    if (repositoryUrl === lastFetchedUrlRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      if (repositoryUrl === lastFetchedUrlRef.current) return;
+      startTransition(async () => {
+        const res = await fetchRepoMetadataAction(repositoryUrl);
+        if (res.error) return;
+        const data = res.data!;
+        lastFetchedUrlRef.current = repositoryUrl;
+        applyFetchedMetadata(data);
+        setStep(1);
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [repositoryUrl]);
+
   function save(submit: boolean) {
     clearErrors();
+    const mergedMetadata = {
+      ...(repoMetadata && typeof repoMetadata === "object"
+        ? (repoMetadata as Record<string, unknown>)
+        : {}),
+      licenseSlug: licenseSlug || undefined,
+    };
     startTransition(async () => {
       const res = await createSubmissionFromRepoAction(
         repositoryUrl,
-        repoMetadata,
+        mergedMetadata,
         {
           name,
           tagline,
           description,
           homepageUrl,
           primaryLanguage,
+          licenseSlug,
           submit,
         },
       );
@@ -129,6 +188,8 @@ export function SubmitForm() {
       window.location.href = "/dashboard";
     });
   }
+
+  const selectedLicense = licenses.find((l) => l.slug === licenseSlug);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -158,8 +219,8 @@ export function SubmitForm() {
           <div>
             <h2 className="font-display text-xl font-medium">Repository URL</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              We detect the host automatically and pull public metadata for you
-              to review.
+              Paste a GitHub or GitLab URL — we fetch metadata and detect the
+              open-source license automatically.
             </p>
           </div>
           <div className="space-y-2">
@@ -168,7 +229,13 @@ export function SubmitForm() {
               <Input
                 id="repositoryUrl"
                 value={repositoryUrl}
-                onChange={(e) => setRepositoryUrl(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setRepositoryUrl(next);
+                  if (next !== lastFetchedUrlRef.current) {
+                    setRepoMetadata(null);
+                  }
+                }}
                 placeholder="https://github.com/org/project"
                 aria-invalid={Boolean(fieldErrors.repositoryUrl)}
                 aria-describedby={
@@ -178,14 +245,27 @@ export function SubmitForm() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={loadMetadata}
+                onClick={() => fetchMetadata(true)}
                 disabled={pending || !repositoryUrl}
               >
                 {pending ? "Fetching…" : "Fetch metadata"}
               </Button>
             </div>
+            {pending && isAutoFetchableRepoUrl(repositoryUrl) && (
+              <p className="text-xs text-muted-foreground">
+                Fetching repository metadata and license…
+              </p>
+            )}
             {host && host !== "other" && (
               <RepositoryBadge url={repositoryUrl} />
+            )}
+            {licenseSlug && step === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Detected license:{" "}
+                <span className="font-medium text-foreground">
+                  {selectedLicense?.name ?? licenseSlug}
+                </span>
+              </p>
             )}
             {host === "other" && repositoryUrl && (
               <p className="text-xs text-muted-foreground">
@@ -250,6 +330,29 @@ export function SubmitForm() {
               />
               <FieldError messages={fieldErrors.description} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="licenseSlug">Open-source license</Label>
+              <select
+                id="licenseSlug"
+                value={licenseSlug}
+                onChange={(e) => setLicenseSlug(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-invalid={Boolean(fieldErrors.licenseSlug)}
+              >
+                <option value="">Select a license (optional)</option>
+                {licenses.map((l) => (
+                  <option key={l.slug} value={l.slug}>
+                    {l.name}
+                    {l.spdxId ? ` (${l.spdxId})` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Pre-filled from the repository when we can match it to our
+                license list.
+              </p>
+              <FieldError messages={fieldErrors.licenseSlug} />
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="homepageUrl">Homepage</Label>
@@ -301,6 +404,12 @@ export function SubmitForm() {
               <dt className="text-muted-foreground">Repository</dt>
               <dd className="truncate font-mono text-xs">{repositoryUrl}</dd>
             </div>
+            {selectedLicense && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">License</dt>
+                <dd>{selectedLicense.name}</dd>
+              </div>
+            )}
             {host && (
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Host</dt>

@@ -16,9 +16,15 @@ export default async function EditSubmissionPage({ params }: PageProps) {
   const session = await requireAuth("/dashboard");
   const { id } = await params;
 
-  const submission = await prisma.submission.findFirst({
-    where: { id, userId: session.user.id },
-  });
+  const [submission, licenses] = await Promise.all([
+    prisma.submission.findFirst({
+      where: { id, userId: session.user.id },
+    }),
+    prisma.license.findMany({
+      orderBy: { name: "asc" },
+      select: { slug: true, name: true, spdxId: true },
+    }),
+  ]);
 
   if (!submission) notFound();
 
@@ -69,7 +75,7 @@ export default async function EditSubmissionPage({ params }: PageProps) {
             : "Finish your listing and submit when ready."}
         </p>
       </div>
-      <EditSubmissionForm submission={submission} />
+      <EditSubmissionForm licenses={licenses} submission={submission} />
     </div>
   );
 }
