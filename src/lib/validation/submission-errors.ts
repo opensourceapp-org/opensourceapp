@@ -13,6 +13,7 @@ export const SUBMISSION_FIELD_LABELS: Record<keyof SubmissionFormInput, string> 
     homepageUrl: "Homepage",
     repositoryUrl: "Repository URL",
     primaryLanguage: "Primary language",
+    licenseSlug: "License",
     submit: "Submit",
   };
 
@@ -56,7 +57,8 @@ export function submissionErrorStep(fieldErrors: SubmissionFieldErrors): number 
     fieldErrors.tagline?.length ||
     fieldErrors.description?.length ||
     fieldErrors.homepageUrl?.length ||
-    fieldErrors.primaryLanguage?.length
+    fieldErrors.primaryLanguage?.length ||
+    fieldErrors.licenseSlug?.length
   ) {
     return 1;
   }

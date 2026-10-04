@@ -1,9 +1,15 @@
 import { requireAuth } from "@/lib/auth/session";
+import { prisma } from "@/lib/db";
 import { SubmitForm } from "@/components/submit-form";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 export default async function SubmitPage() {
   await requireAuth("/submit");
+
+  const licenses = await prisma.license.findMany({
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true, spdxId: true },
+  });
 
   return (
     <div className="space-y-8">
@@ -22,7 +28,7 @@ export default async function SubmitPage() {
           reviewed before publishing.
         </p>
       </div>
-      <SubmitForm />
+      <SubmitForm licenses={licenses} />
     </div>
   );
 }

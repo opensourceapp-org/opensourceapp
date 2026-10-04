@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ModeratorFeedbackBanner } from "@/components/moderator-feedback-banner";
+import { licenseSlugFromRepoMetadataJson } from "@/lib/applications/repo-metadata";
 import { saveSubmissionAction } from "@/server/actions/submissions";
 import {
   isSubmissionFieldErrors,
@@ -13,7 +14,10 @@ import {
   type SubmissionFieldErrors,
 } from "@/lib/validation/submission-errors";
 
+type LicenseOption = { slug: string; name: string; spdxId: string | null };
+
 type EditSubmissionFormProps = {
+  licenses: LicenseOption[];
   submission: {
     id: string;
     status: string;
@@ -24,16 +28,23 @@ type EditSubmissionFormProps = {
     repositoryUrl: string;
     primaryLanguage: string | null;
     reviewerNotes: string | null;
+    repoMetadataJson: unknown;
   };
 };
 
-export function EditSubmissionForm({ submission }: EditSubmissionFormProps) {
+export function EditSubmissionForm({
+  licenses,
+  submission,
+}: EditSubmissionFormProps) {
   const [name, setName] = useState(submission.name);
   const [tagline, setTagline] = useState(submission.tagline ?? "");
   const [description, setDescription] = useState(submission.description);
   const [homepageUrl, setHomepageUrl] = useState(submission.homepageUrl ?? "");
   const [primaryLanguage, setPrimaryLanguage] = useState(
     submission.primaryLanguage ?? "",
+  );
+  const [licenseSlug, setLicenseSlug] = useState(
+    () => licenseSlugFromRepoMetadataJson(submission.repoMetadataJson) ?? "",
   );
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SubmissionFieldErrors>({});
@@ -53,6 +64,7 @@ export function EditSubmissionForm({ submission }: EditSubmissionFormProps) {
           homepageUrl,
           repositoryUrl: submission.repositoryUrl,
           primaryLanguage,
+          licenseSlug,
           submit,
         },
         submission.id,
@@ -129,6 +141,23 @@ export function EditSubmissionForm({ submission }: EditSubmissionFormProps) {
               rows={6}
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="licenseSlug">Open-source license</Label>
+            <select
+              id="licenseSlug"
+              value={licenseSlug}
+              onChange={(e) => setLicenseSlug(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Select a license (optional)</option>
+              {licenses.map((l) => (
+                <option key={l.slug} value={l.slug}>
+                  {l.name}
+                  {l.spdxId ? ` (${l.spdxId})` : ""}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
