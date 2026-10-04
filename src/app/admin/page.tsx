@@ -14,19 +14,25 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   await requireRole(UserRole.MODERATOR, "/admin");
 
-  const queue = await prisma.submission.findMany({
-    where: {
-      status: {
-        in: [
-          SubmissionStatus.SUBMITTED,
-          SubmissionStatus.UNDER_REVIEW,
-          SubmissionStatus.CHANGES_REQUESTED,
-        ],
+  const [queue, licenses] = await Promise.all([
+    prisma.submission.findMany({
+      where: {
+        status: {
+          in: [
+            SubmissionStatus.SUBMITTED,
+            SubmissionStatus.UNDER_REVIEW,
+            SubmissionStatus.CHANGES_REQUESTED,
+          ],
+        },
       },
-    },
-    orderBy: { createdAt: "asc" },
-    include: { user: { select: { email: true, name: true } } },
-  });
+      orderBy: { createdAt: "asc" },
+      include: { user: { select: { email: true, name: true } } },
+    }),
+    prisma.license.findMany({
+      select: { slug: true, name: true, spdxId: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   const recentAudit = await prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
@@ -97,7 +103,11 @@ export default async function AdminPage() {
         ) : (
           <ul className="space-y-3">
             {queue.map((s) => (
-              <AdminSubmissionRow key={s.id} submission={s} />
+              <AdminSubmissionRow
+                key={s.id}
+                submission={s}
+                licenses={licenses}
+              />
             ))}
           </ul>
         )}
