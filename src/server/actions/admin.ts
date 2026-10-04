@@ -69,6 +69,11 @@ export async function moderateSubmissionAction(
     await publishSubmissionAsApplication(submission);
   }
 
+  const submitter = await prisma.user.findUnique({
+    where: { id: submission.userId },
+    select: { email: true, name: true },
+  });
+
   await writeAuditLog({
     actorId: session.user.id,
     action: `submission.${nextStatus.toLowerCase()}`,
@@ -77,6 +82,9 @@ export async function moderateSubmissionAction(
     metadata: {
       from: submission.status,
       to: nextStatus,
+      submissionName: submission.name,
+      submitterEmail: submitter?.email,
+      submitterName: submitter?.name,
       ...(feedback.value
         ? { messageSnippet: feedback.value.slice(0, 120) }
         : {}),
