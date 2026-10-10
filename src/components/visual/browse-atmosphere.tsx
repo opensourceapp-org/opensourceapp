@@ -24,7 +24,7 @@ export function BrowseAtmosphere({ className }: BrowseAtmosphereProps) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 z-0 h-full min-h-[100%] overflow-hidden",
+        "pointer-events-none absolute inset-0 z-0 h-full w-full min-h-full overflow-hidden",
         className,
       )}
       aria-hidden="true"

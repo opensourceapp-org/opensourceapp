@@ -106,20 +106,18 @@ export default async function AppDetailPage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="-mx-4 -mt-8 md:-mt-10">
-        <AppDetailHeaderShell
-          className="px-4 md:px-4"
-          top={
-            <Breadcrumbs
-              items={[
-                { label: "Home", href: "/" },
-                { label: "Browse", href: "/apps" },
-                { label: app.name },
-              ]}
-            />
-          }
-        >
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <AppDetailHeaderShell
+        top={
+          <Breadcrumbs
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Browse", href: "/apps" },
+              { label: app.name },
+            ]}
+          />
+        }
+      >
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 flex-1 gap-5">
             <AppIcon name={app.name} logoUrl={app.logoUrl} size="lg" />
             <div className="min-w-0 space-y-2">
@@ -180,9 +178,8 @@ export default async function AppDetailPage({ params }: { params: Params }) {
             </Button>
           )}
           </div>
-          </div>
-        </AppDetailHeaderShell>
-      </div>
+        </div>
+      </AppDetailHeaderShell>
 
       <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
         <div>
