@@ -100,12 +100,12 @@ export default async function AppDetailPage({ params }: { params: Params }) {
   const hasRelease = Boolean(app.latestReleaseTag && app.latestReleaseAt);
 
   return (
-    <article className="space-y-10">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-
+      <article className="space-y-10">
       <AppDetailHeaderShell
         top={
           <Breadcrumbs
@@ -400,5 +400,6 @@ export default async function AppDetailPage({ params }: { params: Params }) {
         </div>
       </div>
     </article>
+    </>
   );
 }
