@@ -38,6 +38,8 @@ type AppsFiltersProps = {
   platforms: FilterOption[];
   licenses: FilterOption[];
   className?: string;
+  /** When true, filter bar sits inside browse hero (glass card). */
+  embedded?: boolean;
 };
 
 const SORT_LABELS: Record<string, string> = {
@@ -289,8 +291,16 @@ function ActiveFilterChips({
   );
 }
 
+const embeddedFormClass =
+  "rounded-2xl border border-border/50 bg-surface/85 p-4 shadow-sm backdrop-blur-md md:p-5";
+const standaloneFormClass =
+  "rounded-2xl border border-border/70 bg-surface-muted/40 p-4 md:p-5";
+
 export function AppsFilters(props: AppsFiltersProps) {
   const [open, setOpen] = useState(false);
+  const desktopFormClass = props.embedded
+    ? embeddedFormClass
+    : standaloneFormClass;
   const hasActiveFilters = Boolean(
     props.params.q ||
       props.params.category ||
@@ -328,7 +338,12 @@ export function AppsFilters(props: AppsFiltersProps) {
       <div className="flex flex-col gap-3 lg:hidden">
         <form
           method="get"
-          className="flex gap-2 rounded-2xl border border-border/70 bg-surface-muted/50 p-3"
+          className={cn(
+            "flex gap-2 p-3",
+            props.embedded
+              ? "rounded-2xl border border-border/50 bg-surface/90 backdrop-blur-md"
+              : "rounded-2xl border border-border/70 bg-surface-muted/50",
+          )}
         >
           <SearchInput
             name="q"
@@ -400,7 +415,7 @@ export function AppsFilters(props: AppsFiltersProps) {
 
       <form
         method="get"
-        className="hidden space-y-4 rounded-2xl border border-border/70 bg-surface-muted/40 p-4 md:p-5 lg:block"
+        className={cn("hidden space-y-4 lg:block", desktopFormClass)}
       >
         <FilterFields
           {...props}

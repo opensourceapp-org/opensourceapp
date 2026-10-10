@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, Star } from "lucide-react";
 import { AppIcon } from "@/components/app-icon";
+import { AppDetailHeaderShell } from "@/components/visual/app-detail-header-shell";
 import { ClaimAppCard } from "@/components/claim-app-card";
 import { LicenseBadge } from "@/components/badges/license-badge";
 import { PlatformBadge } from "@/components/badges/platform-badge";
@@ -99,58 +100,61 @@ export default async function AppDetailPage({ params }: { params: Params }) {
   const hasRelease = Boolean(app.latestReleaseTag && app.latestReleaseAt);
 
   return (
-    <article className="space-y-10">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-
-      <Breadcrumbs
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Browse", href: "/apps" },
-          { label: app.name },
-        ]}
-      />
-
-      <header className="flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex gap-5">
-          <AppIcon name={app.name} logoUrl={app.logoUrl} size="lg" />
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
-                {app.name}
-              </h1>
-              <VerificationBadge verified={hasVerification} />
-            </div>
-            {app.tagline && (
-              <p className="max-w-2xl text-lg text-muted-foreground">
-                {app.tagline}
-              </p>
-            )}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {app.licenses[0] && (
-                <LicenseBadge
-                  name={app.licenses[0].license.name}
-                  spdxId={app.licenses[0].license.spdxId}
-                />
+      <article className="space-y-10">
+      <AppDetailHeaderShell
+        top={
+          <Breadcrumbs
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Browse", href: "/apps" },
+              { label: app.name },
+            ]}
+          />
+        }
+      >
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 flex-1 gap-5">
+            <AppIcon name={app.name} logoUrl={app.logoUrl} size="lg" />
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
+                  {app.name}
+                </h1>
+                <VerificationBadge verified={hasVerification} />
+              </div>
+              {app.tagline && (
+                <p className="max-w-2xl text-lg text-muted-foreground">
+                  {app.tagline}
+                </p>
               )}
-              {app.platforms.slice(0, 4).map((p) => (
-                <PlatformBadge key={p.platformId} name={p.platform.name} />
-              ))}
-              {app.primaryLanguage && (
-                <Badge variant="outline">{app.primaryLanguage}</Badge>
-              )}
-              {typeof app.stars === "number" && app.stars > 0 && (
-                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                  <Star className="h-4 w-4" aria-hidden />
-                  {app.stars.toLocaleString()}
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {app.licenses[0] && (
+                  <LicenseBadge
+                    name={app.licenses[0].license.name}
+                    spdxId={app.licenses[0].license.spdxId}
+                  />
+                )}
+                {app.platforms.slice(0, 4).map((p) => (
+                  <PlatformBadge key={p.platformId} name={p.platform.name} />
+                ))}
+                {app.primaryLanguage && (
+                  <Badge variant="outline">{app.primaryLanguage}</Badge>
+                )}
+                {typeof app.stars === "number" && app.stars > 0 && (
+                  <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                    <Star className="h-4 w-4" aria-hidden />
+                    {app.stars.toLocaleString()}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2 lg:pt-1">
           <Button asChild>
             <a
               href={app.repositoryUrl}
@@ -173,8 +177,9 @@ export default async function AppDetailPage({ params }: { params: Params }) {
               </a>
             </Button>
           )}
+          </div>
         </div>
-      </header>
+      </AppDetailHeaderShell>
 
       <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
         <div>
@@ -395,5 +400,6 @@ export default async function AppDetailPage({ params }: { params: Params }) {
         </div>
       </div>
     </article>
+    </>
   );
 }
