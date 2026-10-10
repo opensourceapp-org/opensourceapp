@@ -24,14 +24,11 @@ type HeroVisualProps = {
 export function HeroVisual({ variant = "home", className }: HeroVisualProps) {
   const { canvasEnabled, frameloop } = useVisualCanvasPolicy();
 
-  const minHeight =
-    variant === "home" ? "min-h-[22rem] md:min-h-[26rem]" : "min-h-[7rem]";
-
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 -z-10 overflow-hidden",
-        minHeight,
+        "pointer-events-none absolute inset-0 z-0 h-full w-full overflow-hidden",
+        variant === "compact" && "min-h-[7rem]",
         className,
       )}
       aria-hidden="true"

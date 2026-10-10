@@ -27,11 +27,12 @@ export function HeroVisualFallback({
         )}
       />
       <div
-        className="absolute inset-0 opacity-[0.35] dark:opacity-20"
+        className="absolute inset-0 opacity-[0.4] dark:opacity-20"
         style={{
           backgroundImage:
             "linear-gradient(oklch(0.42 0.11 168 / 6%) 1px, transparent 1px), linear-gradient(90deg, oklch(0.42 0.11 168 / 6%) 1px, transparent 1px)",
           backgroundSize: variant === "home" ? "48px 48px" : "40px 40px",
+          backgroundPosition: variant === "home" ? "center top" : undefined,
         }}
       />
       {variant === "home" ? (

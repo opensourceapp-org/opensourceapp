@@ -47,7 +47,8 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-14 md:space-y-16">
-      <HomeHeroSection>
+      <div className="-mx-4 -mt-8 md:-mt-10">
+        <HomeHeroSection className="px-4 md:px-4">
         <div className="mx-auto max-w-3xl space-y-3 text-center">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">
             Open-source discovery
@@ -72,6 +73,7 @@ export default async function HomePage() {
           </Button>
         </div>
       </HomeHeroSection>
+      </div>
 
       {categories.length > 0 && (
         <SectionReveal className="space-y-4">

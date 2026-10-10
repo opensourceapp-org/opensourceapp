@@ -20,9 +20,9 @@ function NodeNetwork({ nodeCount, linkDistance }: NodeNetworkProps) {
     for (let i = 0; i < nodeCount; i++) {
       nodePositions.push(
         new THREE.Vector3(
-          (Math.random() - 0.5) * 5.5,
-          (Math.random() - 0.5) * 2.8,
-          (Math.random() - 0.5) * 2.2,
+          (Math.random() - 0.5) * 8,
+          (Math.random() - 0.5) * 3.6,
+          (Math.random() - 0.5) * 2.4,
         ),
       );
     }
@@ -77,13 +77,16 @@ export type HeroSceneCanvasProps = {
 };
 
 export function HeroSceneCanvas({ frameloop, variant }: HeroSceneCanvasProps) {
-  const nodeCount = variant === "home" ? 16 : 10;
-  const linkDistance = variant === "home" ? 1.85 : 1.6;
+  const nodeCount = variant === "home" ? 22 : 10;
+  const linkDistance = variant === "home" ? 2.35 : 1.6;
 
   return (
     <VisualCanvas
       frameloop={frameloop}
-      camera={{ position: [0, 0, 4.8], fov: 42 }}
+      camera={{
+        position: [0, 0, variant === "home" ? 5.2 : 4.8],
+        fov: variant === "home" ? 48 : 42,
+      }}
     >
       <NodeNetwork nodeCount={nodeCount} linkDistance={linkDistance} />
       {variant === "home" ? <VisualPostFx intensity="hero" /> : null}
