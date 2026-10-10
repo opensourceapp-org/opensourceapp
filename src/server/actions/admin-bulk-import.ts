@@ -58,8 +58,16 @@ export async function previewBulkImportAction(formData: FormData) {
   }
 
   const name = file.name.toLowerCase();
-  if (!name.endsWith(".xlsx") && !name.endsWith(".xls")) {
-    return { error: "Only .xlsx and .xls files are supported" };
+  const isXlsx = name.endsWith(".xlsx");
+  const isLegacyXls = name.endsWith(".xls") && !isXlsx;
+  if (!isXlsx && !isLegacyXls) {
+    return { error: "Only .xlsx spreadsheets are supported" };
+  }
+  if (isLegacyXls) {
+    return {
+      error:
+        "Legacy .xls is not supported. In Excel or Google Sheets, save or download as .xlsx (Microsoft Excel).",
+    };
   }
 
   let buffer: Buffer;
