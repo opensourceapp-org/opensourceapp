@@ -49,3 +49,7 @@ Row 1 of the **Applications** sheet must be the header row. Row 2 documents each
 - Repository URLs are normalized for duplicate detection against existing applications and active submissions.
 - Duplicate `repository_url` or `slug` within the file is rejected.
 - Unknown category, license, platform, tag, or alternative slugs produce row errors.
+
+## Valid slug reference
+
+Allowed **license**, **platform**, **tag**, and **category** slugs (from seed data), plus common spreadsheet mistakes: **[bulk-import-valid-values.md](./bulk-import-valid-values.md)**.
