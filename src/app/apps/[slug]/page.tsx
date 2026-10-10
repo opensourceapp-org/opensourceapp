@@ -19,6 +19,7 @@ import {
   hasActiveLicenseSignal,
   hasMaintainerSignal,
 } from "@/lib/applications/verification-display";
+import { publishedApplicationWhere } from "@/lib/applications/visibility";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ type Params = Promise<{ slug: string }>;
 
 async function getApp(slug: string) {
   return prisma.application.findFirst({
-    where: { slug, publishedAt: { not: null } },
+    where: { slug, ...publishedApplicationWhere() },
     include: {
       categories: { include: { category: true } },
       platforms: { include: { platform: true } },

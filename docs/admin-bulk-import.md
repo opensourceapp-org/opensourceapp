@@ -5,6 +5,7 @@ Admins can create directory listings in bulk from a spreadsheet at **`/admin/bul
 ## Access
 
 - Requires **ADMIN** role (moderators use the normal submission queue at `/admin`).
+- To edit or delete existing listings after import, use [Admin application management](./admin-applications.md).
 - Link: **Admin → Bulk import apps** (visible only to admins).
 
 ## Workflow

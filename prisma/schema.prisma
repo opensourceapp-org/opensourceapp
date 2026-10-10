@@ -72,6 +72,7 @@ model User {
   submissions              Submission[]              @relation("SubmissionOwner")
   deletedSubmissions       Submission[]              @relation("SubmissionDeleter")
   applications             Application[]             @relation("ApplicationSubmitter")
+  deletedApplications      Application[]             @relation("ApplicationDeleter")
   auditLogs                AuditLog[]
   signals                  VerificationSignal[]      @relation("SignalRecorder")
   createdCategories        Category[]                @relation("CategoryCreator")
@@ -190,6 +191,9 @@ model Application {
   latestReleaseAt  DateTime?
   latestReleaseUrl String?
   publishedAt      DateTime?
+  deletedAt        DateTime?
+  deletedById      String?
+  deletedBy        User?     @relation("ApplicationDeleter", fields: [deletedById], references: [id])
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   submittedById    String?
@@ -202,6 +206,9 @@ model Application {
   signals      VerificationSignal[]
   submission   Submission?
   alternatives ApplicationSoftware[]
+
+  @@index([deletedAt])
+  @@index([publishedAt, deletedAt])
 }
 
 model ApplicationCategory {

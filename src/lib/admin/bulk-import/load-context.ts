@@ -1,4 +1,5 @@
 import { normalizeRepositoryUrl } from "@/lib/applications/normalize-repository-url";
+import { activeApplicationWhere } from "@/lib/applications/visibility";
 import { prisma } from "@/lib/db";
 import { SubmissionStatus } from "@/generated/prisma";
 import type { BulkImportLookupContext } from "./validate-rows";
@@ -14,6 +15,7 @@ export async function loadBulkImportLookupContext(): Promise<BulkImportLookupCon
     software,
   ] = await Promise.all([
     prisma.application.findMany({
+      where: activeApplicationWhere(),
       select: { slug: true, repositoryUrl: true },
     }),
     prisma.submission.findMany({

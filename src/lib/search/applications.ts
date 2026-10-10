@@ -1,3 +1,4 @@
+import { publishedApplicationWhere } from "@/lib/applications/visibility";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma";
 
@@ -18,7 +19,7 @@ export async function searchPublishedApplications(
   filters: ApplicationSearchFilters,
 ) {
   const where: Prisma.ApplicationWhereInput = {
-    publishedAt: { not: null },
+    ...publishedApplicationWhere(),
   };
 
   if (filters.q?.trim()) {

@@ -104,11 +104,18 @@ export default async function AdminPage() {
             Review pending submissions and audit recent actions.
           </p>
         </div>
-        {showBulkImport && (
-          <Button asChild size="sm">
-            <Link href="/admin/bulk-import">Bulk import apps</Link>
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {showBulkImport && (
+            <>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/admin/applications">Manage applications</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/admin/bulk-import">Bulk import apps</Link>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <section className="space-y-4">
