@@ -1,5 +1,5 @@
-import ExcelJS from "exceljs";
-import { BULK_IMPORT_HEADER_ROW } from "./columns";
+import * as XLSX from "xlsx";
+import { BULK_IMPORT_COLUMNS, BULK_IMPORT_HEADER_ROW } from "./columns";
 import {
   inferRepositoryHost,
   normalizeHeader,
@@ -12,35 +12,103 @@ import type { BulkImportRowInput } from "./row-schema";
 
 export type RawSheetRow = Record<string, unknown>;
 
-function cellValue(value: ExcelJS.CellValue): unknown {
+function normalizeCellValue(value: unknown): unknown {
   if (value === null || value === undefined) return "";
-  if (typeof value === "object" && value !== null && "text" in value) {
-    return (value as { text: string }).text;
-  }
-  if (typeof value === "object" && value !== null && "result" in value) {
-    return (value as { result: unknown }).result;
-  }
+  if (value instanceof Date) return value.toISOString();
   return value;
+}
+
+function pickApplicationsSheet(workbook: XLSX.WorkBook): string {
+  const preferred = workbook.SheetNames.find(
+    (n) => n.trim().toLowerCase() === "applications",
+  );
+  return preferred ?? workbook.SheetNames[0] ?? "";
+}
+
+function normalizeHintText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+const COLUMN_HINT_TEXTS = new Set(
+  BULK_IMPORT_COLUMNS.map((col) => normalizeHintText(col.description)),
+);
+
+function looksLikeHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Skip template hint row (row 2) when cells match column documentation text. */
+function isTemplateDescriptionRow(raw: RawSheetRow): boolean {
+  const repo = String(raw.repository_url ?? "").trim();
+  if (repo && looksLikeHttpUrl(repo)) return false;
+
+  const filledValues = Object.values(raw)
+    .map((v) => normalizeHintText(String(v ?? "")))
+    .filter(Boolean);
+
+  if (filledValues.length === 0) return false;
+
+  const hintMatches = filledValues.filter((v) => COLUMN_HINT_TEXTS.has(v));
+  if (hintMatches.length >= 3) return true;
+
+  const name = normalizeHintText(String(raw.name ?? ""));
+  return name.startsWith("application display name");
 }
 
 export async function parseBulkImportSpreadsheet(
   buffer: Buffer,
 ): Promise<BulkImportRowInput[]> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  let workbook: XLSX.WorkBook;
+  try {
+    workbook = XLSX.read(buffer, {
+      type: "buffer",
+      cellDates: true,
+      raw: false,
+    });
+  } catch {
+    throw new Error(
+      "Could not read spreadsheet. Use .xlsx format (save from Excel or Google Sheets as Microsoft Excel).",
+    );
+  }
 
-  const sheet = workbook.worksheets[0];
+  const sheetName = pickApplicationsSheet(workbook);
+  if (!sheetName) {
+    throw new Error("Spreadsheet has no worksheets");
+  }
+
+  const sheet = workbook.Sheets[sheetName];
   if (!sheet) {
     throw new Error("Spreadsheet has no worksheets");
   }
 
-  const headerRow = sheet.getRow(1);
-  const headerCells = headerRow.values as ExcelJS.CellValue[];
-  const headers: string[] = [];
-  for (let col = 1; col < headerCells.length; col++) {
-    const normalized = normalizeHeader(headerCells[col]);
-    headers[col] = normalized || `__col_${col}`;
+  const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | Date)[]>(
+    sheet,
+    {
+      header: 1,
+      defval: "",
+      blankrows: false,
+    },
+  );
+
+  if (matrix.length === 0) {
+    throw new Error("Spreadsheet is empty");
   }
+
+  const headerRow = matrix[0] ?? [];
+  const headers: string[] = headerRow.map((cell, index) => {
+    const normalized = normalizeHeader(String(cell ?? ""));
+    return normalized || `__col_${index}`;
+  });
 
   const expectedHeaders: string[] = [...BULK_IMPORT_HEADER_ROW];
   const hasKnownHeader = headers.some((h) => expectedHeaders.includes(h));
@@ -52,22 +120,25 @@ export async function parseBulkImportSpreadsheet(
 
   const rows: BulkImportRowInput[] = [];
 
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return;
+  for (let rowIndex = 1; rowIndex < matrix.length; rowIndex++) {
+    const cells = matrix[rowIndex] ?? [];
+    const rowNumber = rowIndex + 1;
 
     const raw: RawSheetRow = {};
     let hasContent = false;
-    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-      const key = headers[colNumber];
-      if (!key || key.startsWith("__col_")) return;
-      const val = cellValue(cell.value);
+
+    for (let col = 0; col < headers.length; col++) {
+      const key = headers[col];
+      if (!key || key.startsWith("__col_")) continue;
+      const val = normalizeCellValue(cells[col]);
       if (val !== "" && val !== null && val !== undefined) {
         hasContent = true;
       }
       raw[key] = val;
-    });
+    }
 
-    if (!hasContent) return;
+    if (!hasContent) continue;
+    if (isTemplateDescriptionRow(raw)) continue;
 
     const repositoryUrl = String(raw.repository_url ?? "").trim();
     const repositoryHost = inferRepositoryHost(
@@ -103,7 +174,7 @@ export async function parseBulkImportSpreadsheet(
       ),
       publish: parsePublishFlag(raw.publish),
     });
-  });
+  }
 
   return rows;
 }
