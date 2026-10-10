@@ -7,12 +7,18 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@/generated/prisma": path.resolve(
-        __dirname,
-        "./src/generated/prisma/client.ts",
-      ),
-    },
+    alias: [
+      {
+        find: "@/generated/prisma",
+        replacement: path.resolve(
+          __dirname,
+          "./src/generated/prisma/client.ts",
+        ),
+      },
+      {
+        find: "@",
+        replacement: path.resolve(__dirname, "./src"),
+      },
+    ],
   },
 });

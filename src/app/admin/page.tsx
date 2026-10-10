@@ -1,6 +1,10 @@
+import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/rbac";
 import { requireRole } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { UserRole, SubmissionStatus } from "@/generated/prisma";
+import { Button } from "@/components/ui/button";
 import { AdminSubmissionRow } from "@/components/admin-submission-row";
 import { DataTable } from "@/components/admin/data-table";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -13,6 +17,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   await requireRole(UserRole.MODERATOR, "/admin");
+  const session = await auth();
+  const showBulkImport = isAdmin(
+    (session?.user?.role as UserRole) ?? UserRole.USER,
+  );
 
   const [queue, licenses] = await Promise.all([
     prisma.submission.findMany({
@@ -87,13 +95,20 @@ export default async function AdminPage() {
         ]}
       />
 
-      <div>
-        <h1 className="font-display text-3xl font-normal tracking-tight">
-          Moderation
-        </h1>
-        <p className="text-muted-foreground">
-          Review pending submissions and audit recent actions.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-normal tracking-tight">
+            Moderation
+          </h1>
+          <p className="text-muted-foreground">
+            Review pending submissions and audit recent actions.
+          </p>
+        </div>
+        {showBulkImport && (
+          <Button asChild size="sm">
+            <Link href="/admin/bulk-import">Bulk import apps</Link>
+          </Button>
+        )}
       </div>
 
       <section className="space-y-4">

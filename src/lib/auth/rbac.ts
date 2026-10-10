@@ -16,3 +16,12 @@ export function hasMinimumRole(
 export function isModerator(role: UserRole): boolean {
   return hasMinimumRole(role, UserRole.MODERATOR);
 }
+
+export function isAdmin(role: UserRole): boolean {
+  return hasMinimumRole(role, UserRole.ADMIN);
+}
+
+/** Admin-only bulk import (stricter than moderation queue). */
+export function canAccessBulkImport(role: UserRole): boolean {
+  return isAdmin(role);
+}

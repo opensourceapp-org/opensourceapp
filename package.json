@@ -36,6 +36,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^18.0.4",
+    "exceljs": "^4.4.0",
     "isomorphic-dompurify": "^2.26.0",
     "lucide-react": "^1.48.0",
     "next": "^15.2.4",
@@ -63,5 +64,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^2.1.9"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.64.3"
   }
 }
