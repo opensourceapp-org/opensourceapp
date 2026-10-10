@@ -11,6 +11,7 @@ export const SUBMISSION_FIELD_LABELS: Record<keyof SubmissionFormInput, string> 
     tagline: "Tagline",
     description: "Description",
     homepageUrl: "Homepage",
+    logoUrl: "App icon URL",
     repositoryUrl: "Repository URL",
     primaryLanguage: "Primary language",
     licenseSlug: "License",

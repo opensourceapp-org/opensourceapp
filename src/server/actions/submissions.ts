@@ -119,6 +119,18 @@ async function validateSubmitRequirements(
   return { ok: true as const };
 }
 
+function applySubmissionLogoToMetadata(
+  baseMeta: Record<string, unknown>,
+  logoUrl: string | undefined,
+) {
+  const trimmed = logoUrl?.trim() ?? "";
+  if (trimmed) {
+    baseMeta.logoUrl = trimmed;
+  } else {
+    delete baseMeta.logoUrl;
+  }
+}
+
 function buildSubmissionPayload(
   data: ReturnType<typeof submissionFormSchema.parse>,
   userId: string,
@@ -204,6 +216,7 @@ export async function ensureSubmissionDraftAction(
   if (data.licenseSlug) {
     baseMeta.licenseSlug = data.licenseSlug;
   }
+  applySubmissionLogoToMetadata(baseMeta, data.logoUrl);
 
   const payload = buildSubmissionPayload(
     data,
@@ -295,6 +308,7 @@ export async function saveSubmissionAction(
   if (data.licenseSlug) {
     baseMeta.licenseSlug = data.licenseSlug;
   }
+  applySubmissionLogoToMetadata(baseMeta, data.logoUrl);
 
   const payload = buildSubmissionPayload(
     data,

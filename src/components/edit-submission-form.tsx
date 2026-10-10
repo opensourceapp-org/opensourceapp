@@ -6,6 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ModeratorFeedbackBanner } from "@/components/moderator-feedback-banner";
+import { AppIcon } from "@/components/app-icon";
+import {
+  logoUrlFromSubmissionMetadata,
+  explicitLogoUrlFromRepoMetadata,
+} from "@/lib/applications/logo-url";
 import { licenseSlugFromRepoMetadataJson } from "@/lib/applications/repo-metadata";
 import { saveSubmissionAction } from "@/server/actions/submissions";
 import {
@@ -40,6 +45,12 @@ export function EditSubmissionForm({
   const [tagline, setTagline] = useState(submission.tagline ?? "");
   const [description, setDescription] = useState(submission.description);
   const [homepageUrl, setHomepageUrl] = useState(submission.homepageUrl ?? "");
+  const [logoUrl, setLogoUrl] = useState(
+    () =>
+      explicitLogoUrlFromRepoMetadata(submission.repoMetadataJson) ??
+      logoUrlFromSubmissionMetadata(submission.repoMetadataJson) ??
+      "",
+  );
   const [primaryLanguage, setPrimaryLanguage] = useState(
     submission.primaryLanguage ?? "",
   );
@@ -62,9 +73,11 @@ export function EditSubmissionForm({
           tagline,
           description,
           homepageUrl,
+          logoUrl,
           repositoryUrl: submission.repositoryUrl,
           primaryLanguage,
           licenseSlug,
+          repoMetadataJson: submission.repoMetadataJson,
           submit,
         },
         submission.id,
@@ -115,6 +128,25 @@ export function EditSubmissionForm({
           </p>
         </div>
         <div className="space-y-4">
+          <div className="flex items-start gap-4">
+            <AppIcon
+              name={name || submission.name}
+              logoUrl={logoUrl.trim() || logoUrlFromSubmissionMetadata(submission.repoMetadataJson)}
+              size="lg"
+            />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Label htmlFor="logoUrl">App icon URL</Label>
+              <Input
+                id="logoUrl"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://…"
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional image URL for your listing icon.
+              </p>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input

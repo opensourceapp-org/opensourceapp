@@ -34,7 +34,12 @@ export default async function AdminPage() {
         },
       },
       orderBy: { createdAt: "asc" },
-      include: { user: { select: { email: true, name: true } } },
+      include: {
+        user: { select: { email: true, name: true } },
+        repositoryVerification: {
+          select: { logoSvgSanitized: true },
+        },
+      },
     }),
     prisma.license.findMany({
       select: { slug: true, name: true, spdxId: true },

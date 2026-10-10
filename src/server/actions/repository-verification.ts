@@ -14,6 +14,7 @@ import {
   VERIFICATION_FILE_PATH,
 } from "@/lib/applications/repository-verification/providers";
 import { sanitizeAppSvg } from "@/lib/applications/repository-verification/svg";
+import { logoUrlFromSanitizedSvg } from "@/lib/applications/logo-url";
 import { fetchRepositoryMetadata } from "@/lib/applications/repo-metadata";
 import { ossChecksFromMetadata } from "@/lib/applications/repository-oss-checks";
 import { SubmissionStatus } from "@/generated/prisma";
@@ -66,12 +67,17 @@ export async function getRepositoryVerificationStateAction(submissionId: string)
     submission.repositoryVerification?.verifiedAt,
   );
 
+  const iconPreviewUrl = logoUrlFromSanitizedSvg(
+    submission.repositoryVerification?.logoSvgSanitized,
+  );
+
   return {
     data: {
       ownershipVerified,
       ossChecks,
       verificationPath: VERIFICATION_FILE_PATH,
       logoPath: APP_SVG_PATH,
+      iconPreviewUrl,
       lastCheckedAt: submission.repositoryVerification?.lastCheckedAt ?? null,
     },
   };
@@ -236,5 +242,13 @@ export async function verifyRepositoryOwnershipAction(submissionId: string) {
     },
   });
 
-  return { data: { verified: true as const, logoSaved: Boolean(logoSvgSanitized) } };
+  const iconPreviewUrl = logoUrlFromSanitizedSvg(logoSvgSanitized);
+
+  return {
+    data: {
+      verified: true as const,
+      logoSaved: Boolean(logoSvgSanitized),
+      iconPreviewUrl,
+    },
+  };
 }

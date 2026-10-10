@@ -9,11 +9,14 @@ import {
   regenerateVerificationTokenAction,
   verifyRepositoryOwnershipAction,
 } from "@/server/actions/repository-verification";
+import { AppIcon } from "@/components/app-icon";
 import type { OssCheckLine } from "@/lib/applications/repository-oss-checks";
 
 type Props = {
   submissionId: string | null;
+  appName?: string;
   onVerifiedChange?: (verified: boolean) => void;
+  onIconPreviewChange?: (iconUrl: string | null) => void;
 };
 
 function StatusDot({ status }: { status: OssCheckLine["status"] }) {
@@ -30,7 +33,9 @@ function StatusDot({ status }: { status: OssCheckLine["status"] }) {
 
 export function RepositoryVerificationPanel({
   submissionId,
+  appName = "App",
   onVerifiedChange,
+  onIconPreviewChange,
 }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [ownershipVerified, setOwnershipVerified] = useState(false);
@@ -39,6 +44,7 @@ export function RepositoryVerificationPanel({
     ".opensourceapp/verification",
   );
   const [logoPath, setLogoPath] = useState(".opensourceapp/app.svg");
+  const [iconPreviewUrl, setIconPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -51,6 +57,8 @@ export function RepositoryVerificationPanel({
         setOssChecks(state.data.ossChecks);
         setVerificationPath(state.data.verificationPath);
         setLogoPath(state.data.logoPath);
+        setIconPreviewUrl(state.data.iconPreviewUrl);
+        onIconPreviewChange?.(state.data.iconPreviewUrl);
         onVerifiedChange?.(state.data.ownershipVerified);
       }
       const tokenRes = await ensureVerificationTokenAction(submissionId);
@@ -58,7 +66,7 @@ export function RepositoryVerificationPanel({
         setToken(tokenRes.data.token);
       }
     });
-  }, [submissionId, onVerifiedChange]);
+  }, [submissionId, onVerifiedChange, onIconPreviewChange]);
 
   function verify() {
     if (!submissionId) return;
@@ -74,6 +82,12 @@ export function RepositoryVerificationPanel({
       const state = await getRepositoryVerificationStateAction(submissionId);
       if (state.data) {
         setOssChecks(state.data.ossChecks);
+        setIconPreviewUrl(state.data.iconPreviewUrl);
+        onIconPreviewChange?.(state.data.iconPreviewUrl);
+      }
+      if (res.data?.iconPreviewUrl) {
+        setIconPreviewUrl(res.data.iconPreviewUrl);
+        onIconPreviewChange?.(res.data.iconPreviewUrl);
       }
     });
   }
@@ -163,9 +177,31 @@ export function RepositoryVerificationPanel({
         </div>
 
         {ownershipVerified && (
-          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-            Ownership verified — you can continue to review and submit.
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+              Ownership verified — you can continue to review and submit.
+            </p>
+            {iconPreviewUrl ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
+                <AppIcon name={appName} logoUrl={iconPreviewUrl} size="md" />
+                <p className="text-sm text-muted-foreground">
+                  App icon loaded from{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+                    {logoPath}
+                  </code>
+                  .
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No repository icon found at{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+                  {logoPath}
+                </code>
+                . You can add a logo URL on the app info step.
+              </p>
+            )}
+          </div>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>

@@ -1,14 +1,8 @@
+import { resolvePublishedLogoUrl } from "@/lib/applications/logo-url";
 import { licenseSlugFromRepoMetadataJson } from "@/lib/applications/repo-metadata";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 import type { Submission } from "@/generated/prisma";
-
-function logoUrlFromSanitizedSvg(svg: string | null | undefined): string | null {
-  if (!svg) return null;
-  if (Buffer.byteLength(svg, "utf8") > 32_000) return null;
-  const base64 = Buffer.from(svg, "utf8").toString("base64");
-  return `data:image/svg+xml;base64,${base64}`;
-}
 
 async function uniqueSlug(base: string): Promise<string> {
   let slug = slugify(base);
@@ -40,6 +34,11 @@ export async function publishSubmissionAsApplication(submission: Submission) {
       }),
     ]);
 
+  const publishedLogoUrl = resolvePublishedLogoUrl({
+    logoSvgSanitized: verification?.logoSvgSanitized,
+    repoMetadataJson: submission.repoMetadataJson,
+  });
+
   const application = await prisma.$transaction(async (tx) => {
     const app = await tx.application.upsert({
       where: { slug },
@@ -56,7 +55,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         forks: submission.forks,
         lastCommitAt: submission.lastCommitAt,
         primaryLanguage: submission.primaryLanguage,
-        logoUrl: logoUrlFromSanitizedSvg(verification?.logoSvgSanitized),
+        logoUrl: publishedLogoUrl,
         publishedAt: new Date(),
         submittedById: submission.userId,
       },
@@ -72,7 +71,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         forks: submission.forks,
         lastCommitAt: submission.lastCommitAt,
         primaryLanguage: submission.primaryLanguage,
-        logoUrl: logoUrlFromSanitizedSvg(verification?.logoSvgSanitized),
+        logoUrl: publishedLogoUrl,
         publishedAt: new Date(),
       },
     });

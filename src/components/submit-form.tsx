@@ -29,6 +29,8 @@ import {
   submissionFieldErrorSummary,
   type SubmissionFieldErrors,
 } from "@/lib/validation/submission-errors";
+import { AppIcon } from "@/components/app-icon";
+import { logoUrlFromSubmissionMetadata } from "@/lib/applications/logo-url";
 import { cn } from "@/lib/utils";
 
 const STEPS = ["App info", "Categories", "Verification", "Review"] as const;
@@ -41,6 +43,7 @@ type RepoMetadataWithLicense = {
   homepageUrl: string | null;
   primaryLanguage: string | null;
   licenseSlug?: string | null;
+  suggestedLogoUrl?: string | null;
 };
 
 function FieldError({
@@ -104,6 +107,10 @@ export function SubmitForm({
   const [tagline, setTagline] = useState("");
   const [description, setDescription] = useState("");
   const [homepageUrl, setHomepageUrl] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [verificationIconUrl, setVerificationIconUrl] = useState<string | null>(
+    null,
+  );
   const [primaryLanguage, setPrimaryLanguage] = useState("");
   const [licenseSlug, setLicenseSlug] = useState("");
   const [categories, setCategories] = useState<EntityOption[]>([]);
@@ -146,6 +153,7 @@ export function SubmitForm({
       tagline,
       description,
       homepageUrl,
+      logoUrl,
       repositoryUrl,
       primaryLanguage,
       licenseSlug,
@@ -187,6 +195,9 @@ export function SubmitForm({
     setPrimaryLanguage(data.primaryLanguage ?? "");
     if (data.licenseSlug) {
       setLicenseSlug(data.licenseSlug);
+    }
+    if (data.suggestedLogoUrl && !logoUrl.trim()) {
+      setLogoUrl(data.suggestedLogoUrl);
     }
     setMetadataConfirmed(false);
   }
@@ -256,6 +267,12 @@ export function SubmitForm({
   }
 
   const selectedLicense = licenses.find((l) => l.slug === licenseSlug);
+  const metadataIconUrl = logoUrlFromSubmissionMetadata(repoMetadata);
+  const previewIconUrl =
+    verificationIconUrl ||
+    logoUrl.trim() ||
+    metadataIconUrl ||
+    null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -343,6 +360,30 @@ export function SubmitForm({
                 aria-invalid={Boolean(fieldErrors.homepageUrl)}
               />
               <FieldError messages={fieldErrors.homepageUrl} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="logoUrl">App icon URL</Label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <AppIcon name={name || "App"} logoUrl={previewIconUrl} size="md" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <Input
+                    id="logoUrl"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="https://… or leave blank to use a suggested icon"
+                    aria-invalid={Boolean(fieldErrors.logoUrl)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional. We may suggest an icon from your repository or
+                    website. After verification, an SVG at{" "}
+                    <code className="rounded bg-muted px-1 py-0.5">
+                      .opensourceapp/app.svg
+                    </code>{" "}
+                    takes priority when published.
+                  </p>
+                  <FieldError messages={fieldErrors.logoUrl} />
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="tagline">Tagline</Label>
@@ -488,7 +529,9 @@ export function SubmitForm({
           </div>
           <RepositoryVerificationPanel
             submissionId={submissionId}
+            appName={name || "App"}
             onVerifiedChange={setOwnershipVerified}
+            onIconPreviewChange={setVerificationIconUrl}
           />
           <FieldError messages={fieldErrors.ownershipVerified} />
           <div className="flex justify-between gap-2">
@@ -513,6 +556,15 @@ export function SubmitForm({
             <p className="mt-1 text-sm text-muted-foreground">
               Save a draft to finish later, or send for moderator review.
             </p>
+          </div>
+          <div className="flex items-center gap-4 rounded-lg bg-surface-muted p-4">
+            <AppIcon name={name} logoUrl={previewIconUrl} size="lg" />
+            <div>
+              <p className="font-display text-lg font-medium">{name}</p>
+              {tagline ? (
+                <p className="text-sm text-muted-foreground">{tagline}</p>
+              ) : null}
+            </div>
           </div>
           <dl className="space-y-2 rounded-lg bg-surface-muted p-4 text-sm">
             <div className="flex justify-between gap-4">
