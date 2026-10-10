@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LicenseBadge } from "@/components/badges/license-badge";
+import { AppIcon } from "@/components/app-icon";
+import { submissionDisplayLogoUrl } from "@/lib/applications/logo-url";
 import { licenseSlugFromRepoMetadataJson } from "@/lib/applications/repo-metadata";
 import { moderateSubmissionAction } from "@/server/actions/admin";
 import { cn } from "@/lib/utils";
@@ -36,6 +38,7 @@ type RowProps = {
     forks: number | null;
     primaryLanguage: string | null;
     repoMetadataJson: unknown;
+    repositoryVerification?: { logoSvgSanitized: string | null } | null;
     user: { email: string; name: string | null };
   };
 };
@@ -89,6 +92,10 @@ export function AdminSubmissionRow({ submission, licenses }: RowProps) {
     : undefined;
   const hostLabel = formatHostLabel(submission.repositoryHost);
   const descriptionLong = submission.description.length > 280;
+  const iconUrl = submissionDisplayLogoUrl(
+    submission.repoMetadataJson,
+    submission.repositoryVerification?.logoSvgSanitized,
+  );
 
   function act(status: ModerationStatus, reviewerNotes?: string) {
     setError(null);
@@ -116,7 +123,9 @@ export function AdminSubmissionRow({ submission, licenses }: RowProps) {
   return (
     <li className="rounded-xl border border-border bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex min-w-0 flex-1 gap-3">
+          <AppIcon name={submission.name} logoUrl={iconUrl} size="md" />
+          <div className="min-w-0 space-y-1">
           <p className="font-medium">{submission.name}</p>
           {submission.tagline ? (
             <p className="text-sm text-muted-foreground">{submission.tagline}</p>
@@ -130,6 +139,7 @@ export function AdminSubmissionRow({ submission, licenses }: RowProps) {
             ) : null}
             <span className="font-mono text-xs">{submission.user.email}</span>
           </p>
+          </div>
         </div>
         <Badge variant="outline">{submission.status}</Badge>
       </div>

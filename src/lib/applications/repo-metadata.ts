@@ -1,3 +1,4 @@
+import { suggestHomepageIconUrl } from "@/lib/applications/site-icon-suggest";
 import { repoMetadataSchema } from "@/lib/validation/submission";
 
 export type RepoMetadata = ReturnType<typeof repoMetadataSchema.parse>;
@@ -64,7 +65,16 @@ function emptyMetadata(host: "github" | "gitlab" | "unknown"): RepoMetadata {
     licenseSpdxId: null,
     licenseKey: null,
     licenseName: null,
+    suggestedLogoUrl: null,
   });
+}
+
+async function resolveSuggestedLogoUrl(
+  hostAvatarUrl: string | null,
+  homepageUrl: string | null,
+): Promise<string | null> {
+  if (hostAvatarUrl) return hostAvatarUrl;
+  return suggestHomepageIconUrl(homepageUrl);
 }
 
 async function fetchGitHubMetadata(
@@ -91,6 +101,7 @@ async function fetchGitHubMetadata(
     pushed_at: string | null;
     private?: boolean;
     archived?: boolean;
+    owner?: { avatar_url?: string | null };
     license?: {
       key: string;
       name: string;
@@ -104,16 +115,23 @@ async function fetchGitHubMetadata(
     licenseName: data.license?.name ?? null,
   };
 
+  const homepageUrl = data.homepage || null;
+  const suggestedLogoUrl = await resolveSuggestedLogoUrl(
+    data.owner?.avatar_url ?? null,
+    homepageUrl,
+  );
+
   return repoMetadataSchema.parse({
     name: data.name,
     description: data.description,
-    homepageUrl: data.homepage || null,
+    homepageUrl,
     defaultBranch: data.default_branch,
     stars: data.stargazers_count,
     forks: data.forks_count,
     primaryLanguage: data.language,
     lastCommitAt: data.pushed_at,
     host: "github",
+    suggestedLogoUrl,
     ...license,
     raw: { owner, repo, private: data.private ?? false, archived: data.archived ?? false },
   });
@@ -137,6 +155,7 @@ async function fetchGitLabMetadata(projectPath: string): Promise<RepoMetadata> {
     star_count: number;
     forks_count: number;
     last_activity_at: string | null;
+    avatar_url?: string | null;
     license?: {
       key: string;
       name: string;
@@ -150,16 +169,23 @@ async function fetchGitLabMetadata(projectPath: string): Promise<RepoMetadata> {
     licenseName: data.license?.name ?? null,
   };
 
+  const homepageUrl = data.web_url || null;
+  const suggestedLogoUrl = await resolveSuggestedLogoUrl(
+    data.avatar_url ?? null,
+    homepageUrl,
+  );
+
   return repoMetadataSchema.parse({
     name: data.name,
     description: data.description,
-    homepageUrl: data.web_url || null,
+    homepageUrl,
     defaultBranch: data.default_branch,
     stars: data.star_count,
     forks: data.forks_count,
     primaryLanguage: null,
     lastCommitAt: data.last_activity_at,
     host: "gitlab",
+    suggestedLogoUrl,
     ...license,
     raw: { projectPath },
   });

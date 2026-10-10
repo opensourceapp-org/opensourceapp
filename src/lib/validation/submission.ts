@@ -58,6 +58,11 @@ export const submissionFormSchema = z.object({
     .or(z.literal("")),
   categoryIds: categoryIdsSchema.optional().default([]),
   alternativeIds: alternativeIdsSchema.optional().default([]),
+  logoUrl: z
+    .string()
+    .url("Enter a valid image URL")
+    .optional()
+    .or(z.literal("")),
   submit: z.boolean().optional(),
   ownershipVerified: z.boolean().optional(),
 });
@@ -77,6 +82,7 @@ export const repoMetadataSchema = z.object({
   licenseSpdxId: z.string().nullable().optional(),
   licenseKey: z.string().nullable().optional(),
   licenseName: z.string().nullable().optional(),
+  suggestedLogoUrl: z.string().url().nullable().optional(),
   raw: z.record(z.string(), z.unknown()).optional(),
 });
 

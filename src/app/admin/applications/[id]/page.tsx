@@ -11,6 +11,7 @@ import {
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AppIcon } from "@/components/app-icon";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,9 @@ export default async function AdminApplicationDetailPage({
       />
 
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
+        <div className="flex gap-4">
+          <AppIcon name={app.name} logoUrl={app.logoUrl} size="lg" />
+          <div className="space-y-2">
           <h1 className="font-display text-3xl font-normal tracking-tight">
             {app.name}
           </h1>
@@ -53,6 +56,7 @@ export default async function AdminApplicationDetailPage({
             {app.primaryLanguage && (
               <Badge variant="outline">{app.primaryLanguage}</Badge>
             )}
+          </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -125,7 +129,10 @@ export default async function AdminApplicationDetailPage({
             {app.logoUrl && (
               <div>
                 <dt className="text-muted-foreground">Logo</dt>
-                <dd className="break-all">{app.logoUrl}</dd>
+                <dd className="flex items-center gap-3">
+                  <AppIcon name={app.name} logoUrl={app.logoUrl} size="sm" />
+                  <span className="break-all font-mono text-xs">{app.logoUrl}</span>
+                </dd>
               </div>
             )}
           </dl>
