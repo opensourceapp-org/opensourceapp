@@ -5,10 +5,14 @@ import { useMemo, useState, useTransition } from "react";
 import {
   bulkDeleteApplicationsAction,
   bulkRestoreApplicationsAction,
+  publishApplicationsAction,
+  unpublishApplicationsAction,
   type ApplicationDeleteMode,
 } from "@/server/actions/admin-applications";
 import { ApplicationDeleteButton } from "@/components/admin/application-delete-button";
+import { ApplicationPublishButton } from "@/components/admin/application-publish-button";
 import { ApplicationRestoreButton } from "@/components/admin/application-restore-button";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -56,7 +60,9 @@ export function ApplicationsList({
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkAction, setBulkAction] = useState<"delete" | "restore">("delete");
+  const [bulkAction, setBulkAction] = useState<
+    "delete" | "restore" | "publish" | "unpublish"
+  >("delete");
   const [deleteMode, setDeleteMode] = useState<ApplicationDeleteMode>("soft");
   const [permanentConfirmed, setPermanentConfirmed] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
@@ -79,7 +85,9 @@ export function ApplicationsList({
     });
   }
 
-  function openBulkDialog(action: "delete" | "restore") {
+  function openBulkDialog(
+    action: "delete" | "restore" | "publish" | "unpublish",
+  ) {
     setBulkAction(action);
     setDeleteMode(view === "deleted" ? "hard" : "soft");
     setPermanentConfirmed(false);
@@ -105,6 +113,36 @@ export function ApplicationsList({
           return;
         }
         setBulkMessage(`Restored ${res.restoredCount} application(s).`);
+      } else if (bulkAction === "publish") {
+        const res = await publishApplicationsAction(ids);
+        if (res.error) {
+          setBulkError(res.error);
+          return;
+        }
+        const failed = res.results?.filter((r) => !r.ok) ?? [];
+        if (failed.length > 0) {
+          setBulkMessage(
+            `Published ${res.publishedCount}; ${failed.length} failed`,
+          );
+        } else {
+          setBulkMessage(`Published ${res.publishedCount} application(s).`);
+        }
+      } else if (bulkAction === "unpublish") {
+        const res = await unpublishApplicationsAction(ids);
+        if (res.error) {
+          setBulkError(res.error);
+          return;
+        }
+        const failed = res.results?.filter((r) => !r.ok) ?? [];
+        if (failed.length > 0) {
+          setBulkMessage(
+            `Unpublished ${res.unpublishedCount}; ${failed.length} failed`,
+          );
+        } else {
+          setBulkMessage(
+            `Unpublished ${res.unpublishedCount} application(s).`,
+          );
+        }
       } else {
         const res = await bulkDeleteApplicationsAction(ids, {
           mode: deleteMode,
@@ -145,26 +183,53 @@ export function ApplicationsList({
   const bulkTitle =
     bulkAction === "restore"
       ? `Restore ${selected.size} application(s)?`
-      : `Delete ${selected.size} application(s)?`;
+      : bulkAction === "publish"
+        ? `Publish ${selected.size} application(s)?`
+        : bulkAction === "unpublish"
+          ? `Unpublish ${selected.size} application(s)?`
+          : `Delete ${selected.size} application(s)?`;
 
   const bulkDescription =
     bulkAction === "restore"
       ? "Selected listings will return to the active list."
-      : "Choose soft delete (trash) or permanent removal for the selected listings.";
+      : bulkAction === "publish"
+        ? "Selected listings will appear on the public directory, search, and sitemap."
+        : bulkAction === "unpublish"
+          ? "Selected listings will be hidden from the public site until published again."
+          : "Choose soft delete (trash) or permanent removal for the selected listings.";
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         {view === "active" ? (
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            disabled={selected.size === 0 || pending}
-            onClick={() => openBulkDialog("delete")}
-          >
-            Delete selected ({selected.size})
-          </Button>
+          <>
+            <Button
+              type="button"
+              size="sm"
+              disabled={selected.size === 0 || pending}
+              onClick={() => openBulkDialog("publish")}
+            >
+              Publish selected ({selected.size})
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={selected.size === 0 || pending}
+              onClick={() => openBulkDialog("unpublish")}
+            >
+              Unpublish selected ({selected.size})
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={selected.size === 0 || pending}
+              onClick={() => openBulkDialog("delete")}
+            >
+              Delete selected ({selected.size})
+            </Button>
+          </>
         ) : (
           <>
             <Button
@@ -230,7 +295,9 @@ export function ApplicationsList({
                   {row.slug}
                 </td>
                 <td className="px-3 py-2.5 align-top">
-                  {row.publishedAt ? "Published" : "Draft"}
+                  <Badge variant={row.publishedAt ? "default" : "outline"}>
+                    {row.publishedAt ? "Published" : "Draft"}
+                  </Badge>
                 </td>
                 {view === "deleted" && (
                   <>
@@ -256,11 +323,19 @@ export function ApplicationsList({
                       </Link>
                     </Button>
                     {view === "active" ? (
-                      <ApplicationDeleteButton
-                        applicationId={row.id}
-                        applicationName={row.name}
-                        variant="ghost"
-                      />
+                      <>
+                        <ApplicationPublishButton
+                          applicationId={row.id}
+                          applicationName={row.name}
+                          published={Boolean(row.publishedAt)}
+                          variant="outline"
+                        />
+                        <ApplicationDeleteButton
+                          applicationId={row.id}
+                          applicationName={row.name}
+                          variant="ghost"
+                        />
+                      </>
                     ) : (
                       <>
                         <ApplicationRestoreButton
@@ -353,7 +428,11 @@ export function ApplicationsList({
             <Button
               type="button"
               variant={
-                bulkAction === "restore" ? "default" : "destructive"
+                bulkAction === "delete"
+                  ? "destructive"
+                  : bulkAction === "unpublish"
+                    ? "outline"
+                    : "default"
               }
               disabled={
                 pending ||
@@ -367,9 +446,13 @@ export function ApplicationsList({
                 ? "Working…"
                 : bulkAction === "restore"
                   ? "Restore selected"
-                  : view === "deleted" || deleteMode === "hard"
-                    ? "Delete permanently"
-                    : "Soft delete selected"}
+                  : bulkAction === "publish"
+                    ? "Publish selected"
+                    : bulkAction === "unpublish"
+                      ? "Unpublish selected"
+                      : view === "deleted" || deleteMode === "hard"
+                        ? "Delete permanently"
+                        : "Soft delete selected"}
             </Button>
           </DialogFooter>
         </DialogContent>

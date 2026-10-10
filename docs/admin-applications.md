@@ -34,7 +34,20 @@ Trash actions per row or in bulk:
 - **Restore** — clears `deletedAt` / `deletedById`; published apps reappear on the public site when `publishedAt` is set.
 - **Hard delete** — same safeguards as above.
 
-Audit log actions: `application.deleted`, `application.restored`, `application.hard_deleted`, `application.updated`.
+Audit log actions: `application.deleted`, `application.restored`, `application.hard_deleted`, `application.updated`, `application.published`, `application.unpublished`.
+
+## Publish and unpublish
+
+On the **Active** tab, each row shows a **Published** or **Draft** badge and a **Publish** / **Unpublish** control (toggle `publishedAt`).
+
+- **Publish** — sets `publishedAt` to now if unset, otherwise keeps the existing timestamp.
+- **Unpublish** — sets `publishedAt` to `null` (draft stays in admin but is hidden on the public site).
+
+Bulk actions **Publish selected** and **Unpublish selected** use the same rules with a confirmation dialog. Soft-deleted rows in trash cannot be published until **Restore** clears `deletedAt`.
+
+Server actions (ADMIN only): `publishApplicationsAction(ids)`, `unpublishApplicationsAction(ids)`, plus single-row `publishApplicationAction` / `unpublishApplicationAction`. Successful changes revalidate `/apps`, `/sitemap.xml`, and admin application routes.
+
+Public visibility uses `publishedApplicationWhere()` (`publishedAt` set and not soft-deleted) for directory search, app detail pages, and the sitemap.
 
 ## Edit validation
 

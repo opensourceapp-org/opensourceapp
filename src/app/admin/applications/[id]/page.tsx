@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VerificationSignalsList } from "@/components/verification-signals-list";
 import { ApplicationDeleteButton } from "@/components/admin/application-delete-button";
+import { ApplicationPublishButton } from "@/components/admin/application-publish-button";
 import { ApplicationRestoreButton } from "@/components/admin/application-restore-button";
 import {
   getAdminApplicationDetail,
@@ -58,6 +59,14 @@ export default async function AdminApplicationDetailPage({
           <Button asChild size="sm">
             <Link href={`/admin/applications/${app.id}/edit`}>Edit</Link>
           </Button>
+          {!isDeleted && (
+            <ApplicationPublishButton
+              applicationId={app.id}
+              applicationName={app.name}
+              published={Boolean(app.publishedAt)}
+              variant={app.publishedAt ? "outline" : "default"}
+            />
+          )}
           {app.publishedAt && !isDeleted && (
             <Button asChild variant="outline" size="sm">
               <Link href={`/apps/${app.slug}`} target="_blank">

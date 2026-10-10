@@ -9,6 +9,8 @@ export type BulkDeleteRowResult = {
   error?: string;
 };
 
+export type BulkPublishRowResult = BulkDeleteRowResult;
+
 export async function softDeleteApplicationById(
   applicationId: string,
   actorId: string,
@@ -85,6 +87,96 @@ export async function restoreApplicationById(
   });
 
   return { ok: true, name: app.name };
+}
+
+export async function publishApplicationById(
+  applicationId: string,
+  actorId: string,
+): Promise<{ ok: true; name: string } | { error: string }> {
+  const app = await prisma.application.findFirst({
+    where: { id: applicationId, ...activeApplicationWhere() },
+    select: { id: true, name: true, slug: true, publishedAt: true },
+  });
+  if (!app) {
+    return { error: "Not found" };
+  }
+
+  const publishedAt = app.publishedAt ?? new Date();
+
+  await prisma.application.update({
+    where: { id: applicationId },
+    data: { publishedAt },
+  });
+
+  await writeAuditLog({
+    actorId,
+    action: "application.published",
+    entityType: "Application",
+    entityId: applicationId,
+    metadata: { name: app.name, slug: app.slug },
+  });
+
+  return { ok: true, name: app.name };
+}
+
+export async function unpublishApplicationById(
+  applicationId: string,
+  actorId: string,
+): Promise<{ ok: true; name: string } | { error: string }> {
+  const app = await prisma.application.findFirst({
+    where: { id: applicationId, ...activeApplicationWhere() },
+    select: { id: true, name: true, slug: true },
+  });
+  if (!app) {
+    return { error: "Not found" };
+  }
+
+  await prisma.application.update({
+    where: { id: applicationId },
+    data: { publishedAt: null },
+  });
+
+  await writeAuditLog({
+    actorId,
+    action: "application.unpublished",
+    entityType: "Application",
+    entityId: applicationId,
+    metadata: { name: app.name, slug: app.slug },
+  });
+
+  return { ok: true, name: app.name };
+}
+
+export async function bulkPublishApplications(
+  applicationIds: string[],
+  actorId: string,
+): Promise<BulkPublishRowResult[]> {
+  const results: BulkPublishRowResult[] = [];
+  for (const id of applicationIds) {
+    const result = await publishApplicationById(id, actorId);
+    if ("error" in result) {
+      results.push({ id, ok: false, error: result.error });
+    } else {
+      results.push({ id, ok: true });
+    }
+  }
+  return results;
+}
+
+export async function bulkUnpublishApplications(
+  applicationIds: string[],
+  actorId: string,
+): Promise<BulkPublishRowResult[]> {
+  const results: BulkPublishRowResult[] = [];
+  for (const id of applicationIds) {
+    const result = await unpublishApplicationById(id, actorId);
+    if ("error" in result) {
+      results.push({ id, ok: false, error: result.error });
+    } else {
+      results.push({ id, ok: true });
+    }
+  }
+  return results;
 }
 
 export async function bulkRestoreApplications(

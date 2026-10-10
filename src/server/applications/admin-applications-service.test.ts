@@ -67,6 +67,71 @@ describe("admin application delete service", () => {
     });
   });
 
+  it("returns per-row errors for partial bulk publish failures", async () => {
+    prismaMock.application.findFirst
+      .mockResolvedValueOnce({
+        id: "ok",
+        name: "A",
+        slug: "a",
+        publishedAt: null,
+      })
+      .mockResolvedValueOnce(null);
+    prismaMock.application.update.mockResolvedValue({});
+
+    const { bulkPublishApplications } = await import(
+      "./admin-applications-service"
+    );
+
+    const results = await bulkPublishApplications(["ok", "trashed"], "admin");
+    expect(results).toEqual([
+      { id: "ok", ok: true },
+      { id: "trashed", ok: false, error: "Not found" },
+    ]);
+    expect(prismaMock.application.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("unpublish clears publishedAt for active applications", async () => {
+    prismaMock.application.findFirst.mockResolvedValue({
+      id: "app-1",
+      name: "App",
+      slug: "app",
+    });
+    prismaMock.application.update.mockResolvedValue({});
+
+    const { unpublishApplicationById } = await import(
+      "./admin-applications-service"
+    );
+
+    const result = await unpublishApplicationById("app-1", "admin");
+    expect(result).toEqual({ ok: true, name: "App" });
+    expect(prismaMock.application.update).toHaveBeenCalledWith({
+      where: { id: "app-1" },
+      data: { publishedAt: null },
+    });
+  });
+
+  it("publish keeps existing publishedAt when set", async () => {
+    const existing = new Date("2024-01-15T12:00:00.000Z");
+    prismaMock.application.findFirst.mockResolvedValue({
+      id: "app-1",
+      name: "App",
+      slug: "app",
+      publishedAt: existing,
+    });
+    prismaMock.application.update.mockResolvedValue({});
+
+    const { publishApplicationById } = await import(
+      "./admin-applications-service"
+    );
+
+    const result = await publishApplicationById("app-1", "admin");
+    expect(result).toEqual({ ok: true, name: "App" });
+    expect(prismaMock.application.update).toHaveBeenCalledWith({
+      where: { id: "app-1" },
+      data: { publishedAt: existing },
+    });
+  });
+
   it("hard-deletes application and unlinks submission", async () => {
     prismaMock.application.findUnique.mockResolvedValue({
       id: "app-1",
