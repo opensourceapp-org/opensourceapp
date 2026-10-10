@@ -14,7 +14,21 @@ export const dynamic = "force-dynamic";
 type SearchParams = Promise<{
   q?: string;
   status?: string;
+  view?: string;
 }>;
+
+function buildListHref(params: {
+  q?: string;
+  status: string;
+  view: "active" | "deleted";
+}) {
+  const search = new URLSearchParams();
+  if (params.q?.trim()) search.set("q", params.q.trim());
+  if (params.status !== "all") search.set("status", params.status);
+  if (params.view === "deleted") search.set("view", "deleted");
+  const qs = search.toString();
+  return qs ? `/admin/applications?${qs}` : "/admin/applications";
+}
 
 export default async function AdminApplicationsPage({
   searchParams,
@@ -29,11 +43,16 @@ export default async function AdminApplicationsPage({
     params.status === "all"
       ? params.status
       : "all";
+  const view = params.view === "deleted" ? "deleted" : "active";
 
   const rows = await listAdminApplicationsQuery({
     q: params.q,
     status,
+    view,
   });
+
+  const activeHref = buildListHref({ q: params.q, status, view: "active" });
+  const deletedHref = buildListHref({ q: params.q, status, view: "deleted" });
 
   return (
     <div className="space-y-8">
@@ -51,7 +70,8 @@ export default async function AdminApplicationsPage({
             Applications
           </h1>
           <p className="text-muted-foreground">
-            View, edit, and soft-delete directory listings (admin only).
+            View, edit, soft-delete, restore, or permanently remove directory
+            listings (admin only).
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
@@ -59,10 +79,36 @@ export default async function AdminApplicationsPage({
         </Button>
       </div>
 
+      <div className="flex gap-2 border-b border-border">
+        <Link
+          href={activeHref}
+          className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+            view === "active"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Active
+        </Link>
+        <Link
+          href={deletedHref}
+          className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+            view === "deleted"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Deleted (trash)
+        </Link>
+      </div>
+
       <form
         method="get"
         className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-surface p-4"
       >
+        {view === "deleted" && (
+          <input type="hidden" name="view" value="deleted" />
+        )}
         <div className="min-w-[12rem] flex-1 space-y-2">
           <Label htmlFor="q">Search</Label>
           <Input
@@ -88,7 +134,7 @@ export default async function AdminApplicationsPage({
         <Button type="submit" size="sm">Filter</Button>
       </form>
 
-      <ApplicationsList rows={rows} />
+      <ApplicationsList rows={rows} view={view} />
     </div>
   );
 }
