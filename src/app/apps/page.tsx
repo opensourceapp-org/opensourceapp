@@ -8,6 +8,7 @@ import Link from "next/link";
 import { searchPublishedApplications } from "@/lib/search/applications";
 import type { ApplicationSort } from "@/lib/search/applications";
 import { prisma } from "@/lib/db";
+import { HeroVisual } from "@/components/visual/hero-visual";
 
 export const dynamic = "force-dynamic";
 
@@ -64,20 +65,24 @@ export default async function AppsBrowsePage({
 
   return (
     <div className="space-y-8">
-      <Breadcrumbs
-        items={[
-          { label: "Home", href: "/" },
-          { label: "Browse apps" },
-        ]}
-      />
+      <div className="relative space-y-6 pb-1">
+        <HeroVisual variant="compact" />
+        <Breadcrumbs
+          className="relative z-10"
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Browse apps" },
+          ]}
+        />
 
-      <div className="space-y-2">
-        <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
-          Browse apps
-        </h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Search the public directory by name, category, platform, and license.
-        </p>
+        <div className="relative z-10 space-y-2">
+          <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
+            Browse apps
+          </h1>
+          <p className="max-w-2xl text-muted-foreground">
+            Search the public directory by name, category, platform, and license.
+          </p>
+        </div>
       </div>
 
       <AppsFilters

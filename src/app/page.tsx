@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppCard } from "@/components/app-card";
 import { HomeHeroSearch } from "@/components/home-hero-search";
+import { HomeHeroSection } from "@/components/visual/home-hero-section";
 import { RecentUpdateRow } from "@/components/recent-update-row";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -45,7 +46,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-14 md:space-y-16">
-      <section className="space-y-6 pt-2 md:pt-4">
+      <HomeHeroSection>
         <div className="mx-auto max-w-3xl space-y-3 text-center">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">
             Open-source discovery
@@ -69,7 +70,7 @@ export default async function HomePage() {
             <Link href="/submit">Submit an app</Link>
           </Button>
         </div>
-      </section>
+      </HomeHeroSection>
 
       {categories.length > 0 && (
         <section className="space-y-4">
