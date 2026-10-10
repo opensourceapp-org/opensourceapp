@@ -23,7 +23,7 @@ export function HeroVisualFallback({
           "absolute inset-0 opacity-90",
           variant === "home"
             ? "bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,oklch(0.42_0.11_168/0.12),transparent_70%)]"
-            : "bg-[radial-gradient(ellipse_70%_80%_at_50%_0%,oklch(0.42_0.11_168/0.08),transparent_65%)]",
+            : "bg-[radial-gradient(ellipse_90%_70%_at_50%_-20%,oklch(0.42_0.11_168/0.14),transparent_72%)]",
         )}
       />
       <div

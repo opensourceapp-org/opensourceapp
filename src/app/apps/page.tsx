@@ -8,7 +8,7 @@ import Link from "next/link";
 import { searchPublishedApplications } from "@/lib/search/applications";
 import type { ApplicationSort } from "@/lib/search/applications";
 import { prisma } from "@/lib/db";
-import { BrowseAtmosphere } from "@/components/visual/browse-atmosphere";
+import { BrowseHeroSection } from "@/components/visual/browse-hero-section";
 
 export const dynamic = "force-dynamic";
 
@@ -65,45 +65,52 @@ export default async function AppsBrowsePage({
 
   return (
     <div className="space-y-8">
-      <div className="relative space-y-6 pb-1">
-        <BrowseAtmosphere />
-        <Breadcrumbs
-          className="relative z-10"
-          items={[
-            { label: "Home", href: "/" },
-            { label: "Browse apps" },
-          ]}
-        />
+      <div className="-mx-4 -mt-8 md:-mt-10">
+        <BrowseHeroSection className="px-4 md:px-4">
+          <Breadcrumbs
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Browse apps" },
+            ]}
+          />
 
-        <div className="relative z-10 space-y-2">
-          <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
-            Browse apps
-          </h1>
-          <p className="max-w-2xl text-muted-foreground">
-            Search the public directory by name, category, platform, and license.
-          </p>
-        </div>
+          <div className="max-w-2xl space-y-2">
+            <p className="text-sm font-medium uppercase tracking-widest text-primary">
+              Directory
+            </p>
+            <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
+              Browse apps
+            </h1>
+            <p className="text-muted-foreground">
+              Search the public directory by name, category, platform, and
+              license.
+            </p>
+          </div>
+
+          <AppsFilters
+            params={filterParams}
+            categories={categories}
+            platforms={platforms}
+            licenses={licenses}
+            embedded
+          />
+        </BrowseHeroSection>
       </div>
 
-      <AppsFilters
-        params={filterParams}
-        categories={categories}
-        platforms={platforms}
-        licenses={licenses}
-      />
-
-      <p className="text-sm tabular-nums text-muted-foreground">
-        <span className="font-display text-lg font-normal text-foreground">
-          {result.total}
-        </span>{" "}
-        {result.total === 1 ? "app" : "apps"}
-        {params.q ? (
-          <>
-            {" "}
-            matching &ldquo;{params.q}&rdquo;
-          </>
-        ) : null}
-      </p>
+      <div className="flex items-baseline justify-between gap-4 border-b border-border/60 pb-3">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-display text-2xl font-normal tabular-nums text-foreground">
+            {result.total}
+          </span>{" "}
+          {result.total === 1 ? "app" : "apps"}
+          {params.q ? (
+            <>
+              {" "}
+              matching &ldquo;{params.q}&rdquo;
+            </>
+          ) : null}
+        </p>
+      </div>
 
       {result.items.length === 0 ? (
         <EmptyState
