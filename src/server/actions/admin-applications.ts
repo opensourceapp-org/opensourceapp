@@ -11,11 +11,15 @@ import { prisma } from "@/lib/db";
 import { adminApplicationFormSchema } from "@/lib/validation/admin-application";
 import {
   bulkHardDeleteApplications,
+  bulkPublishApplications,
   bulkRestoreApplications,
   bulkSoftDeleteApplications,
+  bulkUnpublishApplications,
   hardDeleteApplicationById,
+  publishApplicationById,
   restoreApplicationById,
   softDeleteApplicationById,
+  unpublishApplicationById,
   updateApplicationFromAdminInput,
 } from "@/server/applications/admin-applications-service";
 import type { Prisma } from "@/generated/prisma";
@@ -158,6 +162,86 @@ export async function bulkRestoreApplicationsAction(applicationIds: string[]) {
   };
 }
 
+export async function publishApplicationsAction(applicationIds: string[]) {
+  const gate = await requireAdminApplicationsSession();
+  if (gate.error || !gate.session) return unauthorized();
+
+  const validated = validateBulkIds(applicationIds);
+  if ("error" in validated) return { error: validated.error };
+
+  const results = await bulkPublishApplications(
+    validated.ids,
+    gate.session.user.id,
+  );
+
+  revalidateAdminApplicationPaths();
+
+  const failed = results.filter((r) => !r.ok);
+  return {
+    ok: true as const,
+    results,
+    publishedCount: results.filter((r) => r.ok).length,
+    failedCount: failed.length,
+  };
+}
+
+export async function unpublishApplicationsAction(applicationIds: string[]) {
+  const gate = await requireAdminApplicationsSession();
+  if (gate.error || !gate.session) return unauthorized();
+
+  const validated = validateBulkIds(applicationIds);
+  if ("error" in validated) return { error: validated.error };
+
+  const results = await bulkUnpublishApplications(
+    validated.ids,
+    gate.session.user.id,
+  );
+
+  revalidateAdminApplicationPaths();
+
+  const failed = results.filter((r) => !r.ok);
+  return {
+    ok: true as const,
+    results,
+    unpublishedCount: results.filter((r) => r.ok).length,
+    failedCount: failed.length,
+  };
+}
+
+export async function publishApplicationAction(applicationId: string) {
+  const gate = await requireAdminApplicationsSession();
+  if (gate.error || !gate.session) return unauthorized();
+
+  const result = await publishApplicationById(
+    applicationId,
+    gate.session.user.id,
+  );
+  if ("error" in result) {
+    return { error: result.error };
+  }
+
+  revalidateAdminApplicationPaths();
+  revalidatePath(`/admin/applications/${applicationId}`);
+  return { ok: true as const };
+}
+
+export async function unpublishApplicationAction(applicationId: string) {
+  const gate = await requireAdminApplicationsSession();
+  if (gate.error || !gate.session) return unauthorized();
+
+  const result = await unpublishApplicationById(
+    applicationId,
+    gate.session.user.id,
+  );
+  if ("error" in result) {
+    return { error: result.error };
+  }
+
+  revalidateAdminApplicationPaths();
+  revalidatePath(`/admin/applications/${applicationId}`);
+  return { ok: true as const };
+}
+
 export async function updateApplicationAction(
   applicationId: string,
   raw: unknown,
@@ -191,6 +275,7 @@ function revalidateAdminApplicationPaths() {
   revalidatePath("/admin");
   revalidatePath("/admin/applications");
   revalidatePath("/apps");
+  revalidatePath("/sitemap.xml");
 }
 
 export async function listAdminApplicationsQuery(params: {

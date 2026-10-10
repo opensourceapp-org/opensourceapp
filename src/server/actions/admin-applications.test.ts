@@ -12,6 +12,8 @@ const hardDeleteMock = vi.fn();
 const restoreMock = vi.fn();
 const bulkRestoreMock = vi.fn();
 const bulkHardDeleteMock = vi.fn();
+const bulkPublishMock = vi.fn();
+const bulkUnpublishMock = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   auth: () => authMock(),
@@ -25,6 +27,11 @@ vi.mock("@/server/applications/admin-applications-service", () => ({
     bulkHardDeleteMock(...args),
   restoreApplicationById: (...args: unknown[]) => restoreMock(...args),
   bulkRestoreApplications: (...args: unknown[]) => bulkRestoreMock(...args),
+  bulkPublishApplications: (...args: unknown[]) => bulkPublishMock(...args),
+  bulkUnpublishApplications: (...args: unknown[]) =>
+    bulkUnpublishMock(...args),
+  publishApplicationById: vi.fn(),
+  unpublishApplicationById: vi.fn(),
   updateApplicationFromAdminInput: vi.fn(),
 }));
 
@@ -41,6 +48,8 @@ describe("admin application actions auth", () => {
     restoreMock.mockReset();
     bulkRestoreMock.mockReset();
     bulkHardDeleteMock.mockReset();
+    bulkPublishMock.mockReset();
+    bulkUnpublishMock.mockReset();
   });
 
   it("rejects delete for non-admin users", async () => {
@@ -83,6 +92,26 @@ describe("admin application actions auth", () => {
     const res = await restoreApplicationAction("app-1");
     expect(res).toEqual({ error: "Admin access required" });
     expect(restoreMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects bulk publish for non-admin users", async () => {
+    authMock.mockResolvedValue({
+      user: { id: "u1", role: UserRole.MODERATOR },
+    });
+    const { publishApplicationsAction } = await import("./admin-applications");
+    const res = await publishApplicationsAction(["app-1"]);
+    expect(res).toEqual({ error: "Admin access required" });
+    expect(bulkPublishMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects bulk unpublish when unauthenticated", async () => {
+    authMock.mockResolvedValue(null);
+    const { unpublishApplicationsAction } = await import(
+      "./admin-applications"
+    );
+    const res = await unpublishApplicationsAction(["app-1"]);
+    expect(res).toEqual({ error: "Admin access required" });
+    expect(bulkUnpublishMock).not.toHaveBeenCalled();
   });
 
   it("calls hard delete for admin users", async () => {
