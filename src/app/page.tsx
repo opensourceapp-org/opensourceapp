@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppCard } from "@/components/app-card";
 import { HomeHeroSearch } from "@/components/home-hero-search";
 import { HomeHeroSection } from "@/components/visual/home-hero-section";
+import { SectionReveal } from "@/components/visual/section-reveal";
 import { RecentUpdateRow } from "@/components/recent-update-row";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -73,7 +74,7 @@ export default async function HomePage() {
       </HomeHeroSection>
 
       {categories.length > 0 && (
-        <section className="space-y-4">
+        <SectionReveal className="space-y-4">
           <h2 className="font-display text-2xl font-normal">Popular categories</h2>
           <div className="flex flex-wrap gap-2">
             {categories.map((c) => (
@@ -86,11 +87,11 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
-        </section>
+        </SectionReveal>
       )}
 
       {featured.length > 0 && (
-        <section className="space-y-5">
+        <SectionReveal className="space-y-5">
           <div className="flex items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-normal">Popular applications</h2>
             <Link
@@ -105,11 +106,11 @@ export default async function HomePage() {
               <AppCard key={app.id} {...appCardProps(app)} />
             ))}
           </div>
-        </section>
+        </SectionReveal>
       )}
 
       {recent.length > 0 && (
-        <section className="space-y-5">
+        <SectionReveal className="space-y-5">
           <div className="flex items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-normal">Recently updated</h2>
             <Link
@@ -126,11 +127,11 @@ export default async function HomePage() {
               </li>
             ))}
           </ul>
-        </section>
+        </SectionReveal>
       )}
 
       {newest.length > 0 && (
-        <section className="space-y-5">
+        <SectionReveal className="space-y-5">
           <div className="space-y-1">
             <h2 className="font-display text-2xl font-normal">New & noteworthy</h2>
             <p className="text-sm text-muted-foreground">
@@ -142,10 +143,10 @@ export default async function HomePage() {
               <AppCard key={app.id} {...appCardProps(app)} />
             ))}
           </div>
-        </section>
+        </SectionReveal>
       )}
 
-      <section className="rounded-2xl border border-border bg-surface-muted px-6 py-10 text-center md:px-12">
+      <SectionReveal className="rounded-2xl border border-border bg-surface-muted px-6 py-10 text-center md:px-12">
         <h2 className="font-display text-2xl font-normal">
           Know a project we should list?
         </h2>
@@ -156,7 +157,7 @@ export default async function HomePage() {
         <Button asChild className="mt-6" size="lg">
           <Link href="/submit">Start submission</Link>
         </Button>
-      </section>
+      </SectionReveal>
     </div>
   );
 }

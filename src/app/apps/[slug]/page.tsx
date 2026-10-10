@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, Star } from "lucide-react";
 import { AppIcon } from "@/components/app-icon";
+import { AppDetailAccent } from "@/components/visual/app-detail-accent";
 import { ClaimAppCard } from "@/components/claim-app-card";
 import { LicenseBadge } from "@/components/badges/license-badge";
 import { PlatformBadge } from "@/components/badges/platform-badge";
@@ -114,9 +115,9 @@ export default async function AppDetailPage({ params }: { params: Params }) {
       />
 
       <header className="flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex gap-5">
+        <div className="flex min-w-0 flex-1 gap-5">
           <AppIcon name={app.name} logoUrl={app.logoUrl} size="lg" />
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
                 {app.name}
@@ -150,7 +151,9 @@ export default async function AppDetailPage({ params }: { params: Params }) {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
+          <AppDetailAccent className="mx-auto sm:mx-0" />
+          <div className="flex flex-wrap gap-2">
           <Button asChild>
             <a
               href={app.repositoryUrl}
@@ -173,6 +176,7 @@ export default async function AppDetailPage({ params }: { params: Params }) {
               </a>
             </Button>
           )}
+          </div>
         </div>
       </header>
 

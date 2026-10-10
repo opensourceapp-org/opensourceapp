@@ -8,7 +8,7 @@ import Link from "next/link";
 import { searchPublishedApplications } from "@/lib/search/applications";
 import type { ApplicationSort } from "@/lib/search/applications";
 import { prisma } from "@/lib/db";
-import { HeroVisual } from "@/components/visual/hero-visual";
+import { BrowseAtmosphere } from "@/components/visual/browse-atmosphere";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +66,7 @@ export default async function AppsBrowsePage({
   return (
     <div className="space-y-8">
       <div className="relative space-y-6 pb-1">
-        <HeroVisual variant="compact" />
+        <BrowseAtmosphere />
         <Breadcrumbs
           className="relative z-10"
           items={[
@@ -107,6 +107,7 @@ export default async function AppsBrowsePage({
 
       {result.items.length === 0 ? (
         <EmptyState
+          showVisual
           title="No apps match your filters"
           description="Try clearing filters or broadening your search terms."
           action={
