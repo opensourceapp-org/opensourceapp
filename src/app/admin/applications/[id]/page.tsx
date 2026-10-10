@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VerificationSignalsList } from "@/components/verification-signals-list";
 import { ApplicationDeleteButton } from "@/components/admin/application-delete-button";
+import { ApplicationRestoreButton } from "@/components/admin/application-restore-button";
 import {
   getAdminApplicationDetail,
   requireAdminApplicationsPage,
@@ -24,6 +25,8 @@ export default async function AdminApplicationDetailPage({
   const app = await getAdminApplicationDetail(id);
   if (!app) notFound();
 
+  const isDeleted = app.deletedAt != null;
+
   return (
     <div className="space-y-8">
       <Breadcrumbs
@@ -42,6 +45,7 @@ export default async function AdminApplicationDetailPage({
           </h1>
           <p className="font-mono text-sm text-muted-foreground">{app.slug}</p>
           <div className="flex flex-wrap gap-2">
+            {isDeleted && <Badge variant="destructive">In trash</Badge>}
             <Badge variant={app.publishedAt ? "default" : "outline"}>
               {app.publishedAt ? "Published" : "Draft"}
             </Badge>
@@ -54,18 +58,35 @@ export default async function AdminApplicationDetailPage({
           <Button asChild size="sm">
             <Link href={`/admin/applications/${app.id}/edit`}>Edit</Link>
           </Button>
-          {app.publishedAt && (
+          {app.publishedAt && !isDeleted && (
             <Button asChild variant="outline" size="sm">
               <Link href={`/apps/${app.slug}`} target="_blank">
                 Public page
               </Link>
             </Button>
           )}
-          <ApplicationDeleteButton
-            applicationId={app.id}
-            applicationName={app.name}
-            redirectTo="/admin/applications"
-          />
+          {isDeleted ? (
+            <>
+              <ApplicationRestoreButton
+                applicationId={app.id}
+                applicationName={app.name}
+                redirectTo="/admin/applications?view=deleted"
+              />
+              <ApplicationDeleteButton
+                applicationId={app.id}
+                applicationName={app.name}
+                redirectTo="/admin/applications?view=deleted"
+                defaultMode="hard"
+                allowSoftDelete={false}
+              />
+            </>
+          ) : (
+            <ApplicationDeleteButton
+              applicationId={app.id}
+              applicationName={app.name}
+              redirectTo="/admin/applications"
+            />
+          )}
         </div>
       </div>
 
@@ -186,6 +207,22 @@ export default async function AdminApplicationDetailPage({
                 {app.updatedAt.toLocaleString()}
               </dd>
             </div>
+            {isDeleted && (
+              <>
+                <div>
+                  <dt className="text-muted-foreground">Deleted at</dt>
+                  <dd>{app.deletedAt?.toLocaleString() ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Deleted by</dt>
+                  <dd>
+                    {app.deletedBy
+                      ? `${app.deletedBy.name ?? "—"} (${app.deletedBy.email})`
+                      : "—"}
+                  </dd>
+                </div>
+              </>
+            )}
             {app.latestReleaseTag && (
               <div>
                 <dt className="text-muted-foreground">Latest release</dt>

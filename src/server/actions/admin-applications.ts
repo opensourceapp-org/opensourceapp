@@ -3,11 +3,18 @@
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/auth/rbac";
 import { requireRole } from "@/lib/auth/session";
-import { activeApplicationWhere } from "@/lib/applications/visibility";
+import {
+  activeApplicationWhere,
+  deletedApplicationWhere,
+} from "@/lib/applications/visibility";
 import { prisma } from "@/lib/db";
 import { adminApplicationFormSchema } from "@/lib/validation/admin-application";
 import {
+  bulkHardDeleteApplications,
+  bulkRestoreApplications,
   bulkSoftDeleteApplications,
+  hardDeleteApplicationById,
+  restoreApplicationById,
   softDeleteApplicationById,
   updateApplicationFromAdminInput,
 } from "@/server/applications/admin-applications-service";
@@ -41,11 +48,39 @@ export async function requireAdminApplicationsPage() {
   return session;
 }
 
-export async function deleteApplicationAction(applicationId: string) {
+export type ApplicationDeleteMode = "soft" | "hard";
+
+export async function deleteApplicationAction(
+  applicationId: string,
+  options?: { mode?: ApplicationDeleteMode },
+) {
   const gate = await requireAdminApplicationsSession();
   if (gate.error || !gate.session) return unauthorized();
 
-  const result = await softDeleteApplicationById(
+  const mode = options?.mode ?? "soft";
+  const result =
+    mode === "hard"
+      ? await hardDeleteApplicationById(
+          applicationId,
+          gate.session.user.id,
+        )
+      : await softDeleteApplicationById(
+          applicationId,
+          gate.session.user.id,
+        );
+  if ("error" in result) {
+    return { error: result.error };
+  }
+
+  revalidateAdminApplicationPaths();
+  return { ok: true as const };
+}
+
+export async function restoreApplicationAction(applicationId: string) {
+  const gate = await requireAdminApplicationsSession();
+  if (gate.error || !gate.session) return unauthorized();
+
+  const result = await restoreApplicationById(
     applicationId,
     gate.session.user.id,
   );
@@ -57,20 +92,58 @@ export async function deleteApplicationAction(applicationId: string) {
   return { ok: true as const };
 }
 
-export async function bulkDeleteApplicationsAction(applicationIds: string[]) {
+function validateBulkIds(applicationIds: string[]) {
+  if (!applicationIds?.length) {
+    return { error: "No applications selected" as const };
+  }
+  if (applicationIds.length > 200) {
+    return { error: "At most 200 applications per batch" as const };
+  }
+  return { ids: [...new Set(applicationIds)] as string[] };
+}
+
+export async function bulkDeleteApplicationsAction(
+  applicationIds: string[],
+  options?: { mode?: ApplicationDeleteMode },
+) {
   const gate = await requireAdminApplicationsSession();
   if (gate.error || !gate.session) return unauthorized();
 
-  if (!applicationIds?.length) {
-    return { error: "No applications selected" };
-  }
-  if (applicationIds.length > 200) {
-    return { error: "At most 200 applications per batch" };
-  }
+  const validated = validateBulkIds(applicationIds);
+  if ("error" in validated) return { error: validated.error };
 
-  const uniqueIds = [...new Set(applicationIds)];
-  const results = await bulkSoftDeleteApplications(
-    uniqueIds,
+  const mode = options?.mode ?? "soft";
+  const results =
+    mode === "hard"
+      ? await bulkHardDeleteApplications(
+          validated.ids,
+          gate.session.user.id,
+        )
+      : await bulkSoftDeleteApplications(
+          validated.ids,
+          gate.session.user.id,
+        );
+
+  revalidateAdminApplicationPaths();
+
+  const failed = results.filter((r) => !r.ok);
+  return {
+    ok: true as const,
+    results,
+    deletedCount: results.filter((r) => r.ok).length,
+    failedCount: failed.length,
+  };
+}
+
+export async function bulkRestoreApplicationsAction(applicationIds: string[]) {
+  const gate = await requireAdminApplicationsSession();
+  if (gate.error || !gate.session) return unauthorized();
+
+  const validated = validateBulkIds(applicationIds);
+  if ("error" in validated) return { error: validated.error };
+
+  const results = await bulkRestoreApplications(
+    validated.ids,
     gate.session.user.id,
   );
 
@@ -80,7 +153,7 @@ export async function bulkDeleteApplicationsAction(applicationIds: string[]) {
   return {
     ok: true as const,
     results,
-    deletedCount: results.filter((r) => r.ok).length,
+    restoredCount: results.filter((r) => r.ok).length,
     failedCount: failed.length,
   };
 }
@@ -123,10 +196,13 @@ function revalidateAdminApplicationPaths() {
 export async function listAdminApplicationsQuery(params: {
   q?: string;
   status?: "all" | "published" | "draft";
+  view?: "active" | "deleted";
 }) {
-  const where: Prisma.ApplicationWhereInput = {
-    ...activeApplicationWhere(),
-  };
+  const view = params.view === "deleted" ? "deleted" : "active";
+  const where: Prisma.ApplicationWhereInput =
+    view === "deleted"
+      ? { ...deletedApplicationWhere() }
+      : { ...activeApplicationWhere() };
 
   if (params.status === "published") {
     where.publishedAt = { not: null };
@@ -145,7 +221,10 @@ export async function listAdminApplicationsQuery(params: {
 
   return prisma.application.findMany({
     where,
-    orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+    orderBy:
+      view === "deleted"
+        ? [{ deletedAt: "desc" }, { name: "asc" }]
+        : [{ updatedAt: "desc" }, { name: "asc" }],
     take: 200,
     select: {
       id: true,
@@ -155,15 +234,18 @@ export async function listAdminApplicationsQuery(params: {
       publishedAt: true,
       stars: true,
       updatedAt: true,
+      deletedAt: true,
+      deletedBy: { select: { id: true, name: true, email: true } },
     },
   });
 }
 
 export async function getAdminApplicationDetail(applicationId: string) {
-  return prisma.application.findFirst({
-    where: { id: applicationId, ...activeApplicationWhere() },
+  return prisma.application.findUnique({
+    where: { id: applicationId },
     include: {
       submittedBy: { select: { id: true, email: true, name: true } },
+      deletedBy: { select: { id: true, email: true, name: true } },
       categories: { include: { category: true } },
       platforms: { include: { platform: true } },
       licenses: { include: { license: true } },

@@ -56,6 +56,100 @@ export async function bulkSoftDeleteApplications(
   return results;
 }
 
+export async function restoreApplicationById(
+  applicationId: string,
+  actorId: string,
+): Promise<{ ok: true; name: string } | { error: string }> {
+  const app = await prisma.application.findFirst({
+    where: { id: applicationId, deletedAt: { not: null } },
+    select: { id: true, name: true, slug: true },
+  });
+  if (!app) {
+    return { error: "Not found in trash" };
+  }
+
+  await prisma.application.update({
+    where: { id: applicationId },
+    data: {
+      deletedAt: null,
+      deletedById: null,
+    },
+  });
+
+  await writeAuditLog({
+    actorId,
+    action: "application.restored",
+    entityType: "Application",
+    entityId: applicationId,
+    metadata: { name: app.name, slug: app.slug },
+  });
+
+  return { ok: true, name: app.name };
+}
+
+export async function bulkRestoreApplications(
+  applicationIds: string[],
+  actorId: string,
+): Promise<BulkDeleteRowResult[]> {
+  const results: BulkDeleteRowResult[] = [];
+  for (const id of applicationIds) {
+    const result = await restoreApplicationById(id, actorId);
+    if ("error" in result) {
+      results.push({ id, ok: false, error: result.error });
+    } else {
+      results.push({ id, ok: true });
+    }
+  }
+  return results;
+}
+
+export async function hardDeleteApplicationById(
+  applicationId: string,
+  actorId: string,
+): Promise<{ ok: true; name: string } | { error: string }> {
+  const app = await prisma.application.findUnique({
+    where: { id: applicationId },
+    select: { id: true, name: true, slug: true },
+  });
+  if (!app) {
+    return { error: "Not found" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.submission.updateMany({
+      where: { applicationId },
+      data: { applicationId: null },
+    });
+    await tx.application.delete({ where: { id: applicationId } });
+  });
+
+  await writeAuditLog({
+    actorId,
+    action: "application.hard_deleted",
+    entityType: "Application",
+    entityId: applicationId,
+    metadata: { name: app.name, slug: app.slug },
+  });
+
+  return { ok: true, name: app.name };
+}
+
+export async function bulkHardDeleteApplications(
+  applicationIds: string[],
+  actorId: string,
+): Promise<BulkDeleteRowResult[]> {
+  const results: BulkDeleteRowResult[] = [];
+  for (const id of applicationIds) {
+    const result = await hardDeleteApplicationById(id, actorId);
+    if ("error" in result) {
+      results.push({ id, ok: false, error: result.error });
+    } else {
+      results.push({ id, ok: true });
+    }
+  }
+  return results;
+}
+
 function emptyToNull(value: string | undefined): string | null {
   if (!value?.trim()) return null;
   return value.trim();
@@ -66,9 +160,15 @@ export async function updateApplicationFromAdminInput(
   input: AdminApplicationFormInput,
   actorId: string,
 ): Promise<{ ok: true } | { error: string }> {
-  const existing = await prisma.application.findFirst({
-    where: { id: applicationId, ...activeApplicationWhere() },
-    select: { id: true, slug: true, publishedAt: true, name: true },
+  const existing = await prisma.application.findUnique({
+    where: { id: applicationId },
+    select: {
+      id: true,
+      slug: true,
+      publishedAt: true,
+      name: true,
+      deletedAt: true,
+    },
   });
   if (!existing) {
     return { error: "Not found" };
@@ -79,7 +179,6 @@ export async function updateApplicationFromAdminInput(
       where: {
         slug: input.slug,
         id: { not: applicationId },
-        ...activeApplicationWhere(),
       },
       select: { id: true },
     });
