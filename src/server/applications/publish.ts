@@ -58,6 +58,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         logoUrl: publishedLogoUrl,
         publishedAt: new Date(),
         submittedById: submission.userId,
+        ownerId: submission.userId,
       },
       update: {
         name: submission.name,
@@ -73,6 +74,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         primaryLanguage: submission.primaryLanguage,
         logoUrl: publishedLogoUrl,
         publishedAt: new Date(),
+        ownerId: submission.userId,
       },
     });
 

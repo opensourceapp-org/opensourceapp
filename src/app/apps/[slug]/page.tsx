@@ -20,8 +20,11 @@ import {
   hasActiveLicenseSignal,
   hasMaintainerSignal,
 } from "@/lib/applications/verification-display";
+import { isApplicationClaimable } from "@/lib/applications/claim-eligibility";
 import { publishedApplicationWhere } from "@/lib/applications/visibility";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ApplicationClaimStatus } from "@/generated/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +81,21 @@ export default async function AppDetailPage({ params }: { params: Params }) {
   const app = await getApp(slug);
   if (!app) notFound();
 
+  const session = await auth();
+  const claimable = isApplicationClaimable(app);
+  let hasPendingClaim = false;
+  if (session?.user?.id && claimable) {
+    const pending = await prisma.applicationClaim.findFirst({
+      where: {
+        applicationId: app.id,
+        userId: session.user.id,
+        status: ApplicationClaimStatus.PENDING,
+      },
+      select: { id: true },
+    });
+    hasPendingClaim = Boolean(pending);
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -95,7 +113,8 @@ export default async function AppDetailPage({ params }: { params: Params }) {
   const activeSignals = app.signals.filter((s) => s.status === "ACTIVE");
   const hasVerification = activeSignals.length > 0;
   const licenseVerified = hasActiveLicenseSignal(activeSignals);
-  const maintainerVerified = hasMaintainerSignal(activeSignals);
+  const maintainerVerified =
+    Boolean(app.ownerId) || hasMaintainerSignal(activeSignals);
   const repoHealth = formatRepositoryHealth(app);
   const hasRelease = Boolean(app.latestReleaseTag && app.latestReleaseAt);
 
@@ -377,7 +396,13 @@ export default async function AppDetailPage({ params }: { params: Params }) {
         </div>
 
         <div className="space-y-6">
-          <ClaimAppCard appName={app.name} />
+          <ClaimAppCard
+            appName={app.name}
+            appSlug={app.slug}
+            claimable={claimable}
+            isSignedIn={Boolean(session?.user?.id)}
+            hasPendingClaim={hasPendingClaim}
+          />
           <div className="rounded-xl border border-border p-4 text-sm">
             <h2 className="font-medium">Source</h2>
             <a

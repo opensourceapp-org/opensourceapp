@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/auth/rbac";
 import { requireRole } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
-import { UserRole, SubmissionStatus } from "@/generated/prisma";
+import { UserRole, SubmissionStatus, ApplicationClaimStatus } from "@/generated/prisma";
 import { Button } from "@/components/ui/button";
 import { AdminSubmissionRow } from "@/components/admin-submission-row";
 import { DataTable } from "@/components/admin/data-table";
@@ -22,7 +22,7 @@ export default async function AdminPage() {
     (session?.user?.role as UserRole) ?? UserRole.USER,
   );
 
-  const [queue, licenses] = await Promise.all([
+  const [queue, licenses, pendingClaimsCount] = await Promise.all([
     prisma.submission.findMany({
       where: {
         status: {
@@ -44,6 +44,9 @@ export default async function AdminPage() {
     prisma.license.findMany({
       select: { slug: true, name: true, spdxId: true },
       orderBy: { name: "asc" },
+    }),
+    prisma.applicationClaim.count({
+      where: { status: ApplicationClaimStatus.PENDING },
     }),
   ]);
 
@@ -110,6 +113,11 @@ export default async function AdminPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/admin/claims">
+              Maintainer claims ({pendingClaimsCount})
+            </Link>
+          </Button>
           {showBulkImport && (
             <>
               <Button asChild size="sm" variant="outline">
