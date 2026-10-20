@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { shouldUseNativeImageTag } from "@/lib/media/remote-image-policy";
 import { cn } from "@/lib/utils";
 
 type AppIconProps = {
@@ -19,28 +20,6 @@ const pixelMap = {
   md: 48,
   lg: 64,
 };
-
-function shouldUseNativeImageTag(src: string): boolean {
-  if (src.startsWith("data:")) return true;
-  try {
-    const { hostname, protocol } = new URL(src);
-    if (protocol !== "https:" && protocol !== "http:") return true;
-    const allowedHosts = [
-      "avatars.githubusercontent.com",
-      "raw.githubusercontent.com",
-      "gitlab.com",
-      "codeberg.org",
-    ];
-    if (allowedHosts.some((h) => hostname === h || hostname.endsWith(`.${h}`))) {
-      return false;
-    }
-    if (hostname.endsWith(".githubusercontent.com")) return false;
-    if (hostname.endsWith(".gitlab.io")) return false;
-    return true;
-  } catch {
-    return true;
-  }
-}
 
 export function AppIcon({
   name,

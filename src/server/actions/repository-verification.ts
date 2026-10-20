@@ -11,8 +11,13 @@ import {
 import {
   APP_SVG_PATH,
   resolveVerificationProvider,
+  SCREENSHOTS_DIR_PATH,
   VERIFICATION_FILE_PATH,
 } from "@/lib/applications/repository-verification/providers";
+import {
+  discoverRepoScreenshotUrls,
+  mergeScreenshotUrls,
+} from "@/lib/applications/repository-verification/screenshots";
 import { sanitizeAppSvg } from "@/lib/applications/repository-verification/svg";
 import { logoUrlFromSanitizedSvg } from "@/lib/applications/logo-url";
 import { fetchRepositoryMetadata } from "@/lib/applications/repo-metadata";
@@ -77,6 +82,8 @@ export async function getRepositoryVerificationStateAction(submissionId: string)
       ossChecks,
       verificationPath: VERIFICATION_FILE_PATH,
       logoPath: APP_SVG_PATH,
+      screenshotsPath: SCREENSHOTS_DIR_PATH,
+      screenshotUrls: submission.screenshotUrls,
       iconPreviewUrl,
       lastCheckedAt: submission.repositoryVerification?.lastCheckedAt ?? null,
     },
@@ -233,14 +240,28 @@ export async function verifyRepositoryOwnershipAction(submissionId: string) {
     logoSvgSanitized = sanitizeAppSvg(svgResult.content);
   }
 
-  await prisma.repositoryVerification.update({
-    where: { submissionId },
-    data: {
-      verifiedAt: now,
-      lastCheckedAt: now,
-      logoSvgSanitized,
-    },
-  });
+  const discoveredScreenshots = await discoverRepoScreenshotUrls(
+    submission.repositoryUrl,
+  );
+  const mergedScreenshotUrls = mergeScreenshotUrls(
+    submission.screenshotUrls,
+    discoveredScreenshots,
+  );
+
+  await prisma.$transaction([
+    prisma.repositoryVerification.update({
+      where: { submissionId },
+      data: {
+        verifiedAt: now,
+        lastCheckedAt: now,
+        logoSvgSanitized,
+      },
+    }),
+    prisma.submission.update({
+      where: { id: submissionId },
+      data: { screenshotUrls: mergedScreenshotUrls },
+    }),
+  ]);
 
   const iconPreviewUrl = logoUrlFromSanitizedSvg(logoSvgSanitized);
 
@@ -249,6 +270,8 @@ export async function verifyRepositoryOwnershipAction(submissionId: string) {
       verified: true as const,
       logoSaved: Boolean(logoSvgSanitized),
       iconPreviewUrl,
+      screenshotUrls: mergedScreenshotUrls,
+      screenshotsImported: discoveredScreenshots.length,
     },
   };
 }

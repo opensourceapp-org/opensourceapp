@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { screenshotUrlsSchema } from "@/lib/validation/screenshot-urls";
 
 export const repositoryUrlSchema = z
   .string()
@@ -63,6 +64,7 @@ export const submissionFormSchema = z.object({
     .url("Enter a valid image URL")
     .optional()
     .or(z.literal("")),
+  screenshotUrls: screenshotUrlsSchema.optional().default([]),
   submit: z.boolean().optional(),
   ownershipVerified: z.boolean().optional(),
 });

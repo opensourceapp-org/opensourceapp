@@ -100,6 +100,9 @@ async function main() {
         repositoryHost: "github",
         primaryLanguage: "TypeScript",
         stars: 0,
+        screenshotUrls: [
+          "https://raw.githubusercontent.com/opensourceapp-org/opensourceapp/main/public/globe.svg",
+        ],
         publishedAt: new Date(),
       },
     });

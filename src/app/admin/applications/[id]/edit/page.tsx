@@ -63,6 +63,7 @@ export default async function AdminApplicationEditPage({
     forks: app.forks,
     openIssuesCount: app.openIssuesCount,
     logoUrl: app.logoUrl ?? "",
+    screenshotUrls: app.screenshotUrls ?? [],
     latestReleaseTag: app.latestReleaseTag ?? "",
     latestReleaseUrl: app.latestReleaseUrl ?? "",
     published: Boolean(app.publishedAt),

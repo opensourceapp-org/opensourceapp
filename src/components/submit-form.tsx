@@ -30,6 +30,7 @@ import {
   type SubmissionFieldErrors,
 } from "@/lib/validation/submission-errors";
 import { AppIcon } from "@/components/app-icon";
+import { ScreenshotUrlEditor } from "@/components/screenshot-url-editor";
 import { logoUrlFromSubmissionMetadata } from "@/lib/applications/logo-url";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +109,7 @@ export function SubmitForm({
   const [description, setDescription] = useState("");
   const [homepageUrl, setHomepageUrl] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
   const [verificationIconUrl, setVerificationIconUrl] = useState<string | null>(
     null,
   );
@@ -154,6 +156,7 @@ export function SubmitForm({
       description,
       homepageUrl,
       logoUrl,
+      screenshotUrls,
       repositoryUrl,
       primaryLanguage,
       licenseSlug,
@@ -385,6 +388,12 @@ export function SubmitForm({
                 </div>
               </div>
             </div>
+            <ScreenshotUrlEditor
+              urls={screenshotUrls}
+              onChange={setScreenshotUrls}
+              fieldErrors={fieldErrors.screenshotUrls}
+              appName={name || "App"}
+            />
             <div className="space-y-2">
               <Label htmlFor="tagline">Tagline</Label>
               <Input
@@ -532,6 +541,7 @@ export function SubmitForm({
             appName={name || "App"}
             onVerifiedChange={setOwnershipVerified}
             onIconPreviewChange={setVerificationIconUrl}
+            onScreenshotUrlsChange={setScreenshotUrls}
           />
           <FieldError messages={fieldErrors.ownershipVerified} />
           <div className="flex justify-between gap-2">
