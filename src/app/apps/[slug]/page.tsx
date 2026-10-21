@@ -119,7 +119,6 @@ export default async function AppDetailPage({ params }: { params: Params }) {
   const repoHealth = formatRepositoryHealth(app);
   const hasRelease = Boolean(app.latestReleaseTag && app.latestReleaseAt);
   const hasScreenshots = app.screenshotUrls.length > 0;
-  const defaultTab = hasScreenshots ? "screenshots" : "overview";
 
   return (
     <>
@@ -205,11 +204,8 @@ export default async function AppDetailPage({ params }: { params: Params }) {
 
       <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
         <div>
-          <Tabs defaultValue={defaultTab}>
+          <Tabs defaultValue="overview">
             <TabsList className="w-full justify-start overflow-x-auto">
-              {hasScreenshots && (
-                <TabsTrigger value="screenshots">Screenshots</TabsTrigger>
-              )}
               <TabsTrigger value="overview">Overview</TabsTrigger>
               {app.platforms.length > 0 && (
                 <TabsTrigger value="platforms">Platforms</TabsTrigger>
@@ -224,16 +220,18 @@ export default async function AppDetailPage({ params }: { params: Params }) {
               <TabsTrigger value="maintainers">Maintainers</TabsTrigger>
             </TabsList>
 
-            {hasScreenshots && (
-              <TabsContent value="screenshots" className="space-y-4">
-                <ScreenshotCarousel
-                  urls={app.screenshotUrls}
-                  appName={app.name}
-                />
-              </TabsContent>
-            )}
-
             <TabsContent value="overview" className="space-y-6">
+              {hasScreenshots && (
+                <section className="space-y-3">
+                  <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                    Screenshots
+                  </h2>
+                  <ScreenshotCarousel
+                    urls={app.screenshotUrls}
+                    appName={app.name}
+                  />
+                </section>
+              )}
               <section>
                 <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
                   About
