@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  ApplicationClaimStatus,
+  type ApplicationClaimStatusValue,
+} from "@/lib/application-claims/constants";
 import { moderateApplicationClaimAction } from "@/server/actions/application-claims";
-import { ApplicationClaimStatus } from "@/generated/prisma";
 
 export type AdminClaimRowData = {
   id: string;
@@ -31,7 +34,7 @@ export function AdminClaimRow({ claim }: { claim: AdminClaimRowData }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function moderate(next: ApplicationClaimStatus) {
+  function moderate(next: ApplicationClaimStatusValue) {
     setError(null);
     startTransition(async () => {
       const res = await moderateApplicationClaimAction(claim.id, next, notes);
