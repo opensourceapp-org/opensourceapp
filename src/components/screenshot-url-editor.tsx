@@ -37,10 +37,21 @@ export function ScreenshotUrlEditor({
   appName = "App",
   className,
 }: ScreenshotUrlEditorProps) {
-  const [rows, setRows] = useState<string[]>(urls.length ? urls : [""]);
+  const [rows, setRows] = useState<string[]>(() =>
+    urls.length > 0 ? [...urls, ""] : [""],
+  );
 
+  // Sync when parent changes URLs (e.g. repo verification import), but do not
+  // wipe in-progress empty rows — `onChange` only sends non-empty URLs.
   useEffect(() => {
-    setRows(urls.length ? urls : [""]);
+    setRows((current) => {
+      const committed = current.map((u) => u.trim()).filter(Boolean);
+      const unchanged =
+        committed.length === urls.length &&
+        committed.every((u, i) => u === urls[i]);
+      if (unchanged) return current;
+      return urls.length > 0 ? [...urls, ""] : [""];
+    });
   }, [urls]);
 
   const previewUrls = validPreviewUrls(rows);
@@ -58,7 +69,9 @@ export function ScreenshotUrlEditor({
 
   function addRow() {
     if (previewUrls.length >= MAX_SCREENSHOTS) return;
-    commit([...rows.filter((u) => u.trim()), ""]);
+    const trimmed = rows.map((u) => u.trim()).filter(Boolean);
+    if (trimmed.length >= MAX_SCREENSHOTS) return;
+    commit([...trimmed, ""]);
   }
 
   function removeRow(index: number) {
