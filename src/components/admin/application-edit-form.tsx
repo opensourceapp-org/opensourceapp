@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScreenshotUrlEditor } from "@/components/screenshot-url-editor";
 
 type Option = { id: string; name: string; slug?: string };
 
@@ -24,6 +25,7 @@ export type ApplicationEditInitial = {
   forks: number | null;
   openIssuesCount: number | null;
   logoUrl: string;
+  screenshotUrls: string[];
   latestReleaseTag: string;
   latestReleaseUrl: string;
   published: boolean;
@@ -258,6 +260,11 @@ export function ApplicationEditForm({
             onChange={(e) => setField("logoUrl", e.target.value)}
           />
         </div>
+        <ScreenshotUrlEditor
+          urls={form.screenshotUrls}
+          onChange={(urls) => setField("screenshotUrls", urls)}
+          appName={form.name}
+        />
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="latestReleaseTag">Latest release tag</Label>

@@ -361,6 +361,7 @@ export async function updateApplicationFromAdminInput(
         forks: input.forks ?? null,
         openIssuesCount: input.openIssuesCount ?? null,
         logoUrl: emptyToNull(input.logoUrl),
+        screenshotUrls: input.screenshotUrls ?? [],
         latestReleaseTag: emptyToNull(input.latestReleaseTag),
         latestReleaseUrl: emptyToNull(input.latestReleaseUrl),
         publishedAt,

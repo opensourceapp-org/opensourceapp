@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { ScreenshotCarousel } from "@/components/screenshot-carousel";
 import { VerificationSignalsList } from "@/components/verification-signals-list";
 import { WhyListedSection } from "@/components/why-listed-section";
 import { formatRepositoryHealth } from "@/lib/applications/repository-health";
@@ -98,6 +99,8 @@ export default async function AppDetailPage({ params }: { params: Params }) {
   const maintainerVerified = hasMaintainerSignal(activeSignals);
   const repoHealth = formatRepositoryHealth(app);
   const hasRelease = Boolean(app.latestReleaseTag && app.latestReleaseAt);
+  const hasScreenshots = app.screenshotUrls.length > 0;
+  const defaultTab = hasScreenshots ? "screenshots" : "overview";
 
   return (
     <>
@@ -183,8 +186,11 @@ export default async function AppDetailPage({ params }: { params: Params }) {
 
       <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
         <div>
-          <Tabs defaultValue="overview">
+          <Tabs defaultValue={defaultTab}>
             <TabsList className="w-full justify-start overflow-x-auto">
+              {hasScreenshots && (
+                <TabsTrigger value="screenshots">Screenshots</TabsTrigger>
+              )}
               <TabsTrigger value="overview">Overview</TabsTrigger>
               {app.platforms.length > 0 && (
                 <TabsTrigger value="platforms">Platforms</TabsTrigger>
@@ -198,6 +204,15 @@ export default async function AppDetailPage({ params }: { params: Params }) {
               <TabsTrigger value="repository">Repository</TabsTrigger>
               <TabsTrigger value="maintainers">Maintainers</TabsTrigger>
             </TabsList>
+
+            {hasScreenshots && (
+              <TabsContent value="screenshots" className="space-y-4">
+                <ScreenshotCarousel
+                  urls={app.screenshotUrls}
+                  appName={app.name}
+                />
+              </TabsContent>
+            )}
 
             <TabsContent value="overview" className="space-y-6">
               <section>

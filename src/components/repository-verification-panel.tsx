@@ -17,6 +17,7 @@ type Props = {
   appName?: string;
   onVerifiedChange?: (verified: boolean) => void;
   onIconPreviewChange?: (iconUrl: string | null) => void;
+  onScreenshotUrlsChange?: (urls: string[]) => void;
 };
 
 function StatusDot({ status }: { status: OssCheckLine["status"] }) {
@@ -36,6 +37,7 @@ export function RepositoryVerificationPanel({
   appName = "App",
   onVerifiedChange,
   onIconPreviewChange,
+  onScreenshotUrlsChange,
 }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [ownershipVerified, setOwnershipVerified] = useState(false);
@@ -44,6 +46,9 @@ export function RepositoryVerificationPanel({
     ".opensourceapp/verification",
   );
   const [logoPath, setLogoPath] = useState(".opensourceapp/app.svg");
+  const [screenshotsPath, setScreenshotsPath] = useState(
+    ".opensourceapp/screenshots",
+  );
   const [iconPreviewUrl, setIconPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -57,7 +62,9 @@ export function RepositoryVerificationPanel({
         setOssChecks(state.data.ossChecks);
         setVerificationPath(state.data.verificationPath);
         setLogoPath(state.data.logoPath);
+        setScreenshotsPath(state.data.screenshotsPath);
         setIconPreviewUrl(state.data.iconPreviewUrl);
+        onScreenshotUrlsChange?.(state.data.screenshotUrls ?? []);
         onIconPreviewChange?.(state.data.iconPreviewUrl);
         onVerifiedChange?.(state.data.ownershipVerified);
       }
@@ -66,7 +73,7 @@ export function RepositoryVerificationPanel({
         setToken(tokenRes.data.token);
       }
     });
-  }, [submissionId, onVerifiedChange, onIconPreviewChange]);
+  }, [submissionId, onVerifiedChange, onIconPreviewChange, onScreenshotUrlsChange]);
 
   function verify() {
     if (!submissionId) return;
@@ -88,6 +95,9 @@ export function RepositoryVerificationPanel({
       if (res.data?.iconPreviewUrl) {
         setIconPreviewUrl(res.data.iconPreviewUrl);
         onIconPreviewChange?.(res.data.iconPreviewUrl);
+      }
+      if (res.data?.screenshotUrls) {
+        onScreenshotUrlsChange?.(res.data.screenshotUrls);
       }
     });
   }
@@ -147,6 +157,13 @@ export function RepositoryVerificationPanel({
               {logoPath}
             </code>{" "}
             (SVG, max 256KB).
+          </li>
+          <li>
+            Optional: add screenshots under{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+              {screenshotsPath}/
+            </code>{" "}
+            (PNG, JPEG, or WebP). We import them when you verify.
           </li>
           <li>Click Verify below after pushing the file.</li>
         </ol>

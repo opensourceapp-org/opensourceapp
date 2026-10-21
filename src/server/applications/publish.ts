@@ -56,6 +56,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         lastCommitAt: submission.lastCommitAt,
         primaryLanguage: submission.primaryLanguage,
         logoUrl: publishedLogoUrl,
+        screenshotUrls: submission.screenshotUrls,
         publishedAt: new Date(),
         submittedById: submission.userId,
       },
@@ -72,6 +73,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         lastCommitAt: submission.lastCommitAt,
         primaryLanguage: submission.primaryLanguage,
         logoUrl: publishedLogoUrl,
+        screenshotUrls: submission.screenshotUrls,
         publishedAt: new Date(),
       },
     });

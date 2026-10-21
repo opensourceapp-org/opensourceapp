@@ -4,6 +4,7 @@ import {
   categoryIdsSchema,
   repositoryUrlSchema,
 } from "@/lib/validation/submission";
+import { screenshotUrlsSchema } from "@/lib/validation/screenshot-urls";
 
 export const adminApplicationFormSchema = z.object({
   name: z
@@ -43,6 +44,7 @@ export const adminApplicationFormSchema = z.object({
   forks: z.coerce.number().int().nonnegative().nullable().optional(),
   openIssuesCount: z.coerce.number().int().nonnegative().nullable().optional(),
   logoUrl: z.string().url().optional().or(z.literal("")),
+  screenshotUrls: screenshotUrlsSchema.default([]),
   latestReleaseTag: z.string().max(200).optional().or(z.literal("")),
   latestReleaseUrl: z.string().url().optional().or(z.literal("")),
   published: z.boolean(),

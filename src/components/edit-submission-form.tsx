@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ModeratorFeedbackBanner } from "@/components/moderator-feedback-banner";
 import { AppIcon } from "@/components/app-icon";
+import { ScreenshotUrlEditor } from "@/components/screenshot-url-editor";
 import {
   logoUrlFromSubmissionMetadata,
   explicitLogoUrlFromRepoMetadata,
@@ -34,6 +35,7 @@ type EditSubmissionFormProps = {
     primaryLanguage: string | null;
     reviewerNotes: string | null;
     repoMetadataJson: unknown;
+    screenshotUrls: string[];
   };
 };
 
@@ -57,6 +59,9 @@ export function EditSubmissionForm({
   const [licenseSlug, setLicenseSlug] = useState(
     () => licenseSlugFromRepoMetadataJson(submission.repoMetadataJson) ?? "",
   );
+  const [screenshotUrls, setScreenshotUrls] = useState(
+    submission.screenshotUrls ?? [],
+  );
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SubmissionFieldErrors>({});
   const [pending, startTransition] = useTransition();
@@ -74,6 +79,7 @@ export function EditSubmissionForm({
           description,
           homepageUrl,
           logoUrl,
+          screenshotUrls,
           repositoryUrl: submission.repositoryUrl,
           primaryLanguage,
           licenseSlug,
@@ -147,6 +153,12 @@ export function EditSubmissionForm({
               </p>
             </div>
           </div>
+          <ScreenshotUrlEditor
+            urls={screenshotUrls}
+            onChange={setScreenshotUrls}
+            fieldErrors={fieldErrors.screenshotUrls}
+            appName={name || submission.name}
+          />
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input
