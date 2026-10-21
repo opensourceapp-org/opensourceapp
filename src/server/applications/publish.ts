@@ -59,6 +59,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         screenshotUrls: submission.screenshotUrls,
         publishedAt: new Date(),
         submittedById: submission.userId,
+        ownerId: submission.userId,
       },
       update: {
         name: submission.name,
@@ -75,6 +76,7 @@ export async function publishSubmissionAsApplication(submission: Submission) {
         logoUrl: publishedLogoUrl,
         screenshotUrls: submission.screenshotUrls,
         publishedAt: new Date(),
+        ownerId: submission.userId,
       },
     });
 

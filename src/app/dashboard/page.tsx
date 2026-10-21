@@ -13,6 +13,14 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await requireAuth("/dashboard");
+  const claims = await prisma.applicationClaim.findMany({
+    where: { userId: session.user.id },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      application: { select: { slug: true, name: true } },
+    },
+  });
+
   const submissions = await prisma.submission.findMany({
     where: {
       userId: session.user.id,
@@ -67,6 +75,34 @@ export default async function DashboardPage() {
           <p className="mt-1 text-2xl font-semibold">{needsAction}</p>
         </div>
       </section>
+
+      {claims.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-medium">My maintainer claims</h2>
+          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+            {claims.map((claim) => (
+              <li
+                key={claim.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5"
+              >
+                <div>
+                  <p className="font-medium">{claim.application.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {claim.status} · Updated{" "}
+                    {claim.updatedAt.toLocaleDateString()}
+                  </p>
+                </div>
+                <Link
+                  href={`/apps/${claim.application.slug}/claim`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {claim.status === "PENDING" ? "Continue claim" : "View app"}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">My submissions</h2>
