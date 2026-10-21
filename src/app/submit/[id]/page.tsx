@@ -19,6 +19,18 @@ export default async function EditSubmissionPage({ params }: PageProps) {
   const [submission, licenses] = await Promise.all([
     prisma.submission.findFirst({
       where: { id, userId: session.user.id },
+      include: {
+        categories: {
+          include: {
+            category: { select: { id: true, name: true, status: true } },
+          },
+        },
+        alternatives: {
+          include: {
+            software: { select: { id: true, name: true, status: true } },
+          },
+        },
+      },
     }),
     prisma.license.findMany({
       orderBy: { name: "asc" },
@@ -75,7 +87,32 @@ export default async function EditSubmissionPage({ params }: PageProps) {
             : "Finish your listing and submit when ready."}
         </p>
       </div>
-      <EditSubmissionForm licenses={licenses} submission={submission} />
+      <EditSubmissionForm
+        licenses={licenses}
+        submission={{
+          id: submission.id,
+          status: submission.status,
+          name: submission.name,
+          tagline: submission.tagline,
+          description: submission.description,
+          homepageUrl: submission.homepageUrl,
+          repositoryUrl: submission.repositoryUrl,
+          primaryLanguage: submission.primaryLanguage,
+          reviewerNotes: submission.reviewerNotes,
+          repoMetadataJson: submission.repoMetadataJson,
+          screenshotUrls: submission.screenshotUrls,
+          categories: submission.categories.map((row) => ({
+            id: row.category.id,
+            name: row.category.name,
+            status: row.category.status,
+          })),
+          alternatives: submission.alternatives.map((row) => ({
+            id: row.software.id,
+            name: row.software.name,
+            status: row.software.status,
+          })),
+        }}
+      />
     </div>
   );
 }

@@ -119,11 +119,18 @@ export function EntitySearchCombobox({
           disabled={selected.length >= maxItems}
           aria-invalid={Boolean(error)}
         />
-        {open && (options.length > 0 || showCreate) && (
+        {open && (
           <ul
             className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-border bg-popover py-1 text-sm shadow-md"
             role="listbox"
           >
+            {options.length === 0 && !showCreate && (
+              <li className="px-3 py-2 text-muted-foreground">
+                {query.trim().length < 2
+                  ? `Type to search, or enter a name (2+ characters) to ${createLabel.toLowerCase()}.`
+                  : "No matches. Use create below or try another search."}
+              </li>
+            )}
             {options
               .filter((o) => !selected.some((s) => s.id === o.id))
               .map((o) => (
@@ -143,7 +150,12 @@ export function EntitySearchCombobox({
                 </li>
               ))}
             {showCreate && (
-              <li className="border-t border-border px-2 py-2">
+              <li
+                className={cn(
+                  "px-2 py-2",
+                  options.length > 0 && "border-t border-border",
+                )}
+              >
                 <Button
                   type="button"
                   variant="ghost"

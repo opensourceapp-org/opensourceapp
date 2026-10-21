@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { ModeratorFeedbackBanner } from "@/components/moderator-feedback-banner";
 import { AppIcon } from "@/components/app-icon";
 import { ScreenshotUrlEditor } from "@/components/screenshot-url-editor";
+import {
+  EntitySearchCombobox,
+  type EntityOption,
+} from "@/components/entity-search-combobox";
+import {
+  createPendingCategoryAction,
+  searchCategoriesAction,
+} from "@/server/actions/categories";
+import {
+  createPendingSoftwareAction,
+  searchSoftwareAction,
+} from "@/server/actions/software";
 import {
   logoUrlFromSubmissionMetadata,
   explicitLogoUrlFromRepoMetadata,
@@ -36,6 +48,8 @@ type EditSubmissionFormProps = {
     reviewerNotes: string | null;
     repoMetadataJson: unknown;
     screenshotUrls: string[];
+    categories: EntityOption[];
+    alternatives: EntityOption[];
   };
 };
 
@@ -62,11 +76,41 @@ export function EditSubmissionForm({
   const [screenshotUrls, setScreenshotUrls] = useState(
     submission.screenshotUrls ?? [],
   );
+  const [categories, setCategories] = useState<EntityOption[]>(
+    submission.categories ?? [],
+  );
+  const [alternatives, setAlternatives] = useState<EntityOption[]>(
+    submission.alternatives ?? [],
+  );
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SubmissionFieldErrors>({});
   const [pending, startTransition] = useTransition();
 
   const isResubmit = submission.status === "CHANGES_REQUESTED";
+
+  const searchCategories = useCallback(async (query: string) => {
+    const res = await searchCategoriesAction(query);
+    if (res.error) return { error: res.error };
+    return {
+      data: res.data!.map((c) => ({
+        id: c.id,
+        name: c.name,
+        status: c.status,
+      })),
+    };
+  }, []);
+
+  const searchSoftware = useCallback(async (query: string) => {
+    const res = await searchSoftwareAction(query);
+    if (res.error) return { error: res.error };
+    return {
+      data: res.data!.map((s) => ({
+        id: s.id,
+        name: s.name,
+        status: s.status,
+      })),
+    };
+  }, []);
 
   function save(submit: boolean) {
     setError(null);
@@ -83,6 +127,8 @@ export function EditSubmissionForm({
           repositoryUrl: submission.repositoryUrl,
           primaryLanguage,
           licenseSlug,
+          categoryIds: categories.map((c) => c.id),
+          alternativeIds: alternatives.map((a) => a.id),
           repoMetadataJson: submission.repoMetadataJson,
           submit,
         },
@@ -203,6 +249,48 @@ export function EditSubmissionForm({
               ))}
             </select>
           </div>
+          <EntitySearchCombobox
+            label="Categories"
+            description="Choose at least one category (up to 3). Search the list or create a new one."
+            maxItems={3}
+            selected={categories}
+            onSelectedChange={setCategories}
+            onSearch={searchCategories}
+            onCreate={async (name) => {
+              const res = await createPendingCategoryAction(name);
+              if (res.error) return { error: res.error };
+              return {
+                data: {
+                  id: res.data!.id,
+                  name: res.data!.name,
+                  status: res.data!.status,
+                },
+              };
+            }}
+            createLabel="Create category"
+            error={fieldErrors.categoryIds?.[0]}
+          />
+          <EntitySearchCombobox
+            label="Alternatives"
+            description="Optional — similar or competing tools."
+            maxItems={10}
+            selected={alternatives}
+            onSelectedChange={setAlternatives}
+            onSearch={searchSoftware}
+            onCreate={async (name) => {
+              const res = await createPendingSoftwareAction(name);
+              if (res.error) return { error: res.error };
+              return {
+                data: {
+                  id: res.data!.id,
+                  name: res.data!.name,
+                  status: res.data!.status,
+                },
+              };
+            }}
+            createLabel="Create alternative"
+            error={fieldErrors.alternativeIds?.[0]}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="homepageUrl">Homepage</Label>
@@ -236,7 +324,7 @@ export function EditSubmissionForm({
           )}
           <Button
             type="button"
-            disabled={pending}
+            disabled={pending || categories.length === 0}
             onClick={() => save(true)}
           >
             {isResubmit ? "Resubmit for review" : "Submit for review"}
