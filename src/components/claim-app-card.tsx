@@ -38,7 +38,13 @@ export function ClaimAppCard({
       </p>
       <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
         <li>Sign in with the account linked to the repository host.</li>
-        <li>Submit a claim with proof of maintainer access.</li>
+        <li>
+          Verify the repo with{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            .opensourceapp/verification
+          </code>{" "}
+          (same as app submit).
+        </li>
         <li>We verify ownership and enable maintainer tools.</li>
       </ol>
       <Button asChild className="mt-6" variant="outline">

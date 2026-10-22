@@ -11,10 +11,13 @@ import {
 import {
   APP_SVG_PATH,
   resolveVerificationProvider,
+  SCREENSHOTS_DIR_PATH,
   VERIFICATION_FILE_PATH,
 } from "@/lib/applications/repository-verification/providers";
 import { sanitizeAppSvg } from "@/lib/applications/repository-verification/svg";
 import { logoUrlFromSanitizedSvg } from "@/lib/applications/logo-url";
+import { fetchRepositoryMetadata } from "@/lib/applications/repo-metadata";
+import { ossChecksFromMetadata } from "@/lib/applications/repository-oss-checks";
 import { ApplicationClaimStatus } from "@/generated/prisma";
 
 async function assertOwnedPendingClaim(claimId: string, userId: string) {
@@ -49,11 +52,22 @@ export async function getClaimVerificationStateAction(claimId: string) {
 
   const iconPreviewUrl = logoUrlFromSanitizedSvg(claim.logoSvgSanitized);
 
+  let metadata = null;
+  try {
+    metadata = await fetchRepositoryMetadata(claim.application.repositoryUrl);
+  } catch {
+    metadata = null;
+  }
+
+  const ossChecks = ossChecksFromMetadata(metadata, null);
+
   return {
     data: {
       ownershipVerified: Boolean(claim.verifiedAt),
+      ossChecks,
       verificationPath: VERIFICATION_FILE_PATH,
       logoPath: APP_SVG_PATH,
+      screenshotsPath: SCREENSHOTS_DIR_PATH,
       repositoryUrl: claim.application.repositoryUrl,
       iconPreviewUrl,
       lastCheckedAt: claim.lastCheckedAt,
