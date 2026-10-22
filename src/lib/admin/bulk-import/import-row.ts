@@ -86,6 +86,7 @@ export async function importBulkRow(
         lastCommitAt: row.lastCommitAt ?? null,
         primaryLanguage: row.primaryLanguage || null,
         logoUrl: row.logoUrl || null,
+        videoUrl: row.videoUrl || null,
         latestReleaseTag: row.latestReleaseTag || null,
         latestReleaseAt: row.latestReleaseAt ?? null,
         latestReleaseUrl: row.latestReleaseUrl || null,

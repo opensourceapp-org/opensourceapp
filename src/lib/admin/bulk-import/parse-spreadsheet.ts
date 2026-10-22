@@ -162,6 +162,7 @@ export async function parseBulkImportSpreadsheet(
       openIssuesCount: parseOptionalInt(raw.open_issues_count),
       lastCommitAt: parseOptionalDate(raw.last_commit_at),
       logoUrl: String(raw.logo_url ?? "").trim(),
+      videoUrl: String(raw.video_url ?? "").trim(),
       latestReleaseTag: String(raw.latest_release_tag ?? "").trim(),
       latestReleaseAt: parseOptionalDate(raw.latest_release_at),
       latestReleaseUrl: String(raw.latest_release_url ?? "").trim(),

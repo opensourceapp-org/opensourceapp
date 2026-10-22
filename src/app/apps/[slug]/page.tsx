@@ -14,6 +14,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScreenshotCarousel } from "@/components/screenshot-carousel";
+import { VideoEmbed } from "@/components/video-embed";
 import { VerificationSignalsList } from "@/components/verification-signals-list";
 import { WhyListedSection } from "@/components/why-listed-section";
 import { formatRepositoryHealth } from "@/lib/applications/repository-health";
@@ -119,6 +120,7 @@ export default async function AppDetailPage({ params }: { params: Params }) {
   const repoHealth = formatRepositoryHealth(app);
   const hasRelease = Boolean(app.latestReleaseTag && app.latestReleaseAt);
   const hasScreenshots = app.screenshotUrls.length > 0;
+  const hasVideo = Boolean(app.videoUrl?.trim());
 
   return (
     <>
@@ -221,6 +223,17 @@ export default async function AppDetailPage({ params }: { params: Params }) {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
+              {hasVideo && app.videoUrl && (
+                <section className="space-y-3">
+                  <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                    Video
+                  </h2>
+                  <VideoEmbed
+                    url={app.videoUrl}
+                    title={`${app.name} demo video`}
+                  />
+                </section>
+              )}
               {hasScreenshots && (
                 <section className="space-y-3">
                   <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">

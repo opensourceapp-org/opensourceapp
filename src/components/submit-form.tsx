@@ -110,6 +110,7 @@ export function SubmitForm({
   const [homepageUrl, setHomepageUrl] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState("");
   const [verificationIconUrl, setVerificationIconUrl] = useState<string | null>(
     null,
   );
@@ -157,6 +158,7 @@ export function SubmitForm({
       homepageUrl,
       logoUrl,
       screenshotUrls,
+      videoUrl,
       repositoryUrl,
       primaryLanguage,
       licenseSlug,
@@ -394,6 +396,21 @@ export function SubmitForm({
               fieldErrors={fieldErrors.screenshotUrls}
               appName={name || "App"}
             />
+            <div className="space-y-2">
+              <Label htmlFor="videoUrl">Video URL (optional)</Label>
+              <Input
+                id="videoUrl"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=…"
+                aria-invalid={Boolean(fieldErrors.videoUrl)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Link to a demo or walkthrough on YouTube, Vimeo, or your site.
+                We embed YouTube and Vimeo on the listing when possible.
+              </p>
+              <FieldError messages={fieldErrors.videoUrl} />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="tagline">Tagline</Label>
               <Input

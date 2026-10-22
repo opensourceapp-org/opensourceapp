@@ -26,6 +26,7 @@ export type ApplicationEditInitial = {
   openIssuesCount: number | null;
   logoUrl: string;
   screenshotUrls: string[];
+  videoUrl: string;
   latestReleaseTag: string;
   latestReleaseUrl: string;
   published: boolean;
@@ -265,6 +266,18 @@ export function ApplicationEditForm({
           onChange={(urls) => setField("screenshotUrls", urls)}
           appName={form.name}
         />
+        <div className="space-y-2">
+          <Label htmlFor="videoUrl">Video URL</Label>
+          <Input
+            id="videoUrl"
+            value={form.videoUrl}
+            onChange={(e) => setField("videoUrl", e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=…"
+          />
+          <p className="text-xs text-muted-foreground">
+            Optional demo or walkthrough (YouTube, Vimeo, or any https link).
+          </p>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="latestReleaseTag">Latest release tag</Label>

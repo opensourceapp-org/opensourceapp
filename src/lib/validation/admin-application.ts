@@ -5,6 +5,7 @@ import {
   repositoryUrlSchema,
 } from "@/lib/validation/submission";
 import { screenshotUrlsSchema } from "@/lib/validation/screenshot-urls";
+import { videoUrlSchema } from "@/lib/validation/video-url";
 
 export const adminApplicationFormSchema = z.object({
   name: z
@@ -45,6 +46,7 @@ export const adminApplicationFormSchema = z.object({
   openIssuesCount: z.coerce.number().int().nonnegative().nullable().optional(),
   logoUrl: z.string().url().optional().or(z.literal("")),
   screenshotUrls: screenshotUrlsSchema.default([]),
+  videoUrl: videoUrlSchema,
   latestReleaseTag: z.string().max(200).optional().or(z.literal("")),
   latestReleaseUrl: z.string().url().optional().or(z.literal("")),
   published: z.boolean(),
