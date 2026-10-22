@@ -88,12 +88,12 @@ export function ScreenshotUrlEditor({
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
-        Optional. Add up to {MAX_SCREENSHOTS} screenshot URLs, or place PNG/JPEG/WebP
-        files in{" "}
+        Optional — up to {MAX_SCREENSHOTS} HTTPS image links (PNG, JPEG, or WebP).
+        Or add files under{" "}
         <code className="rounded bg-muted px-1 py-0.5">
           .opensourceapp/screenshots/
         </code>{" "}
-        — we import them when you verify the repository.
+        in your repo; we pull them in when you complete verification.
       </p>
       <ul className="space-y-2">
         {rows.map((url, index) => (
@@ -102,6 +102,7 @@ export function ScreenshotUrlEditor({
               value={url}
               onChange={(e) => setRow(index, e.target.value)}
               placeholder="https://…"
+              className="min-h-11 min-w-0 flex-1"
               aria-label={`Screenshot URL ${index + 1}`}
               aria-invalid={Boolean(fieldErrors?.length)}
             />
@@ -109,6 +110,7 @@ export function ScreenshotUrlEditor({
               type="button"
               variant="ghost"
               size="icon"
+              className="h-11 w-11 shrink-0"
               onClick={() => removeRow(index)}
               disabled={rows.length === 1 && !url.trim()}
               aria-label={`Remove screenshot URL ${index + 1}`}
