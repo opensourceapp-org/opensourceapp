@@ -108,7 +108,7 @@ export function ScreenshotCarousel({
               type="button"
               variant="secondary"
               size="icon"
-              className="absolute left-3 top-1/2 z-20 -translate-y-1/2 bg-background/90 shadow-sm"
+              className="absolute left-2 top-1/2 z-20 h-10 w-10 -translate-y-1/2 bg-background/90 shadow-sm sm:left-3"
               onClick={() => go(-1)}
               aria-label="Previous screenshot"
             >
@@ -118,7 +118,7 @@ export function ScreenshotCarousel({
               type="button"
               variant="secondary"
               size="icon"
-              className="absolute right-3 top-1/2 z-20 -translate-y-1/2 bg-background/90 shadow-sm"
+              className="absolute right-2 top-1/2 z-20 h-10 w-10 -translate-y-1/2 bg-background/90 shadow-sm sm:right-3"
               onClick={() => go(1)}
               aria-label="Next screenshot"
             >
@@ -141,7 +141,7 @@ export function ScreenshotCarousel({
               aria-selected={i === safeIndex}
               aria-label={`Screenshot ${i + 1}`}
               className={cn(
-                "h-2.5 w-2.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "h-3 w-3 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:h-2.5 sm:w-2.5",
                 i === safeIndex ? "bg-primary" : "bg-muted-foreground/30",
               )}
               onClick={() => setIndex(i)}

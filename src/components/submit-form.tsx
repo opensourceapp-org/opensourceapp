@@ -279,9 +279,9 @@ export function SubmitForm({
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <nav aria-label="Progress" className="flex gap-2">
+      <nav aria-label="Progress" className="flex gap-1.5 sm:gap-2">
         {STEPS.map((label, i) => (
-          <div key={label} className="flex flex-1 flex-col gap-1">
+          <div key={label} className="flex min-w-0 flex-1 flex-col gap-1">
             <div
               className={cn(
                 "h-1 rounded-full",
@@ -290,7 +290,7 @@ export function SubmitForm({
             />
             <span
               className={cn(
-                "text-xs",
+                "truncate text-[10px] sm:text-xs",
                 i === step ? "font-medium text-foreground" : "text-muted-foreground",
               )}
             >
@@ -301,7 +301,7 @@ export function SubmitForm({
       </nav>
 
       {step === 0 && (
-        <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
+        <section className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-6">
           <div>
             <h2 className="font-display text-xl font-medium">App information</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -354,7 +354,12 @@ export function SubmitForm({
               <FieldError messages={fieldErrors.name} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="homepageUrl">Website</Label>
+              <Label htmlFor="homepageUrl">
+                Website{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
+              </Label>
               <Input
                 id="homepageUrl"
                 value={homepageUrl}
@@ -362,6 +367,10 @@ export function SubmitForm({
                 placeholder="https://example.com"
                 aria-invalid={Boolean(fieldErrors.homepageUrl)}
               />
+              <p className="text-xs text-muted-foreground">
+                Link to the project&apos;s marketing site or docs — not the
+                repository URL. Leave blank if the repo is the main home.
+              </p>
               <FieldError messages={fieldErrors.homepageUrl} />
             </div>
             <div className="space-y-2">
@@ -377,12 +386,13 @@ export function SubmitForm({
                     aria-invalid={Boolean(fieldErrors.logoUrl)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Optional. We may suggest an icon from your repository or
-                    website. After verification, an SVG at{" "}
+                    Optional — a square PNG, SVG, or ICO URL works well. We may
+                    pre-fill one from your repo or site. After verification, an
+                    SVG at{" "}
                     <code className="rounded bg-muted px-1 py-0.5">
                       .opensourceapp/app.svg
                     </code>{" "}
-                    takes priority when published.
+                    replaces this on the live listing.
                   </p>
                   <FieldError messages={fieldErrors.logoUrl} />
                 </div>
@@ -395,13 +405,23 @@ export function SubmitForm({
               appName={name || "App"}
             />
             <div className="space-y-2">
-              <Label htmlFor="tagline">Tagline</Label>
+              <Label htmlFor="tagline">
+                Tagline{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
+              </Label>
               <Input
                 id="tagline"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
+                placeholder="One line that sums up what it does"
                 aria-invalid={Boolean(fieldErrors.tagline)}
               />
+              <p className="text-xs text-muted-foreground">
+                Shown under the app name in browse and on the listing — keep it
+                short and specific.
+              </p>
               <FieldError messages={fieldErrors.tagline} />
             </div>
             <div className="space-y-2">
@@ -435,18 +455,28 @@ export function SubmitForm({
               <FieldError messages={fieldErrors.licenseSlug} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="primaryLanguage">Primary language</Label>
+              <Label htmlFor="primaryLanguage">
+                Primary language{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
+              </Label>
               <Input
                 id="primaryLanguage"
                 value={primaryLanguage}
                 onChange={(e) => setPrimaryLanguage(e.target.value)}
+                placeholder="e.g. TypeScript"
               />
+              <p className="text-xs text-muted-foreground">
+                Usually filled in when you fetch metadata from GitHub or GitLab.
+              </p>
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end">
             <Button
               type="button"
+              className="min-h-11 w-full sm:w-auto"
               disabled={pending || !repositoryUrl || !name || !description}
               onClick={() => persistDraft(1)}
             >
@@ -457,7 +487,7 @@ export function SubmitForm({
       )}
 
       {step === 1 && (
-        <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
+        <section className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-6">
           <div>
             <h2 className="font-display text-xl font-medium">
               Categories & alternatives
@@ -492,7 +522,7 @@ export function SubmitForm({
           />
           <EntitySearchCombobox
             label="Alternatives"
-            description="Optional — similar or competing tools (pending entries are reviewed)."
+            description="Optional — tools people might compare or switch from. New names are reviewed like categories."
             maxItems={10}
             selected={alternatives}
             onSelectedChange={setAlternatives}
@@ -511,12 +541,18 @@ export function SubmitForm({
             createLabel="Create alternative"
             error={fieldErrors.alternativeIds?.[0]}
           />
-          <div className="flex justify-between gap-2">
-            <Button type="button" variant="ghost" onClick={() => setStep(0)}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-h-11 w-full sm:w-auto"
+              onClick={() => setStep(0)}
+            >
               Back
             </Button>
             <Button
               type="button"
+              className="min-h-11 w-full sm:w-auto"
               disabled={pending || categories.length === 0}
               onClick={() => persistDraft(2)}
             >
@@ -527,7 +563,7 @@ export function SubmitForm({
       )}
 
       {step === 2 && (
-        <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
+        <section className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-6">
           <div>
             <h2 className="font-display text-xl font-medium">
               Repository verification
@@ -544,12 +580,18 @@ export function SubmitForm({
             onScreenshotUrlsChange={setScreenshotUrls}
           />
           <FieldError messages={fieldErrors.ownershipVerified} />
-          <div className="flex justify-between gap-2">
-            <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-h-11 w-full sm:w-auto"
+              onClick={() => setStep(1)}
+            >
               Back
             </Button>
             <Button
               type="button"
+              className="min-h-11 w-full sm:w-auto"
               disabled={!ownershipVerified || pending}
               onClick={() => setStep(3)}
             >
@@ -560,7 +602,7 @@ export function SubmitForm({
       )}
 
       {step === 3 && (
-        <section className="space-y-4 rounded-xl border border-border bg-surface p-6">
+        <section className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-6">
           <div>
             <h2 className="font-display text-xl font-medium">Review & submit</h2>
             <p className="mt-1 text-sm text-muted-foreground">
