@@ -399,3 +399,11 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
 }
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  source       String   @default("footer")
+  subscribedAt DateTime @default(now())
+}

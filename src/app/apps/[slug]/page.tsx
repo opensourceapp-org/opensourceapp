@@ -145,7 +145,7 @@ export default async function AppDetailPage({ params }: { params: Params }) {
             <AppIcon name={app.name} logoUrl={app.logoUrl} size="lg" />
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-display text-3xl font-normal tracking-tight md:text-4xl">
+                <h1 className="font-display text-2xl font-normal tracking-tight sm:text-3xl md:text-4xl">
                   {app.name}
                 </h1>
                 <VerificationBadge verified={hasVerification} />
@@ -177,8 +177,8 @@ export default async function AppDetailPage({ params }: { params: Params }) {
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2 lg:pt-1">
-          <Button asChild>
+          <div className="flex w-full shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap lg:w-auto lg:pt-1">
+          <Button asChild className="min-h-11 w-full sm:w-auto">
             <a
               href={app.repositoryUrl}
               rel="noopener noreferrer"
@@ -189,7 +189,7 @@ export default async function AppDetailPage({ params }: { params: Params }) {
             </a>
           </Button>
           {app.homepageUrl && (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
               <a
                 href={app.homepageUrl}
                 rel="noopener noreferrer"
@@ -207,7 +207,7 @@ export default async function AppDetailPage({ params }: { params: Params }) {
       <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
         <div>
           <Tabs defaultValue="overview">
-            <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsList className="w-full max-w-full justify-start">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               {app.platforms.length > 0 && (
                 <TabsTrigger value="platforms">Platforms</TabsTrigger>

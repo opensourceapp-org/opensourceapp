@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { GitHubIcon, GoogleIcon } from "@/components/auth-provider-icons";
 
 type SearchParams = Promise<{ callbackUrl?: string }>;
 
@@ -29,7 +30,7 @@ export default async function LoginPage({
     Boolean(process.env.EMAIL_SERVER) && Boolean(process.env.EMAIL_FROM);
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto w-full max-w-md px-0 sm:px-2">
       <Card>
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
@@ -46,7 +47,8 @@ export default async function LoginPage({
                 await signIn("github", { redirectTo });
               }}
             >
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="min-h-11 w-full gap-2">
+                <GitHubIcon />
                 Continue with GitHub
               </Button>
             </form>
@@ -64,7 +66,12 @@ export default async function LoginPage({
                 await signIn("google", { redirectTo });
               }}
             >
-              <Button type="submit" variant="outline" className="w-full">
+              <Button
+                type="submit"
+                variant="outline"
+                className="min-h-11 w-full gap-2"
+              >
+                <GoogleIcon />
                 Continue with Google
               </Button>
             </form>
@@ -77,7 +84,9 @@ export default async function LoginPage({
           )}
 
           <p className="text-center text-sm text-muted-foreground">
-            <Link href="/">Back to home</Link>
+            <Link href="/" className="inline-flex min-h-10 items-center">
+              Back to home
+            </Link>
           </p>
         </CardContent>
       </Card>
