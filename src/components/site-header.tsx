@@ -20,13 +20,13 @@ export async function SiteHeader() {
         "use server";
         await signOut({ redirectTo: "/" });
       }}
-      className="w-full sm:w-auto"
+      className="flex w-full items-center sm:w-auto"
     >
       <Button
         type="submit"
-        variant="outline"
+        variant="ghost"
         size="sm"
-        className="min-h-10 w-full sm:w-auto"
+        className="h-9 w-full px-3 text-muted-foreground hover:text-foreground sm:w-auto"
       >
         Sign out
       </Button>
