@@ -13,6 +13,7 @@ export const SUBMISSION_FIELD_LABELS: Record<keyof SubmissionFormInput, string> 
     homepageUrl: "Homepage",
     logoUrl: "App icon URL",
     screenshotUrls: "Screenshots",
+    videoUrl: "Video",
     repositoryUrl: "Repository URL",
     primaryLanguage: "Primary language",
     licenseSlug: "License",
@@ -67,6 +68,7 @@ export function submissionErrorStep(fieldErrors: SubmissionFieldErrors): number 
     fieldErrors.homepageUrl?.length ||
     fieldErrors.logoUrl?.length ||
     fieldErrors.screenshotUrls?.length ||
+    fieldErrors.videoUrl?.length ||
     fieldErrors.primaryLanguage?.length ||
     fieldErrors.licenseSlug?.length
   ) {

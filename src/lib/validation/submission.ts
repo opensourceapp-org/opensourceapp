@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { screenshotUrlsSchema } from "@/lib/validation/screenshot-urls";
+import { videoUrlSchema } from "@/lib/validation/video-url";
 
 export const repositoryUrlSchema = z
   .string()
@@ -65,6 +66,7 @@ export const submissionFormSchema = z.object({
     .optional()
     .or(z.literal("")),
   screenshotUrls: screenshotUrlsSchema.optional().default([]),
+  videoUrl: videoUrlSchema,
   submit: z.boolean().optional(),
   ownershipVerified: z.boolean().optional(),
 });

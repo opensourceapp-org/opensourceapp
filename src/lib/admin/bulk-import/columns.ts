@@ -85,6 +85,12 @@ export const BULK_IMPORT_COLUMNS = [
     description: "Logo image URL when not using repo icon.",
   },
   {
+    key: "video_url",
+    header: "video_url",
+    required: false,
+    description: "Optional demo video URL (YouTube, Vimeo, or https).",
+  },
+  {
     key: "latest_release_tag",
     header: "latest_release_tag",
     required: false,

@@ -197,6 +197,7 @@ model Application {
   primaryLanguage  String?
   logoUrl          String?
   screenshotUrls   String[]  @default([])
+  videoUrl         String?
   latestReleaseTag String?
   latestReleaseAt  DateTime?
   latestReleaseUrl String?
@@ -291,6 +292,7 @@ model Submission {
   primaryLanguage        String?
   repoMetadataJson       Json?
   screenshotUrls         String[]         @default([])
+  videoUrl               String?
   reviewerNotes          String?          @db.Text
   reviewedAt             DateTime?
   deletedAt              DateTime?

@@ -126,6 +126,12 @@ export default async function AdminApplicationDetailPage({
                 <dd className="break-all">{app.homepageUrl}</dd>
               </div>
             )}
+            {app.videoUrl && (
+              <div>
+                <dt className="text-muted-foreground">Video</dt>
+                <dd className="break-all">{app.videoUrl}</dd>
+              </div>
+            )}
             {app.logoUrl && (
               <div>
                 <dt className="text-muted-foreground">Logo</dt>

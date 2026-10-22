@@ -101,6 +101,7 @@ export default async function EditSubmissionPage({ params }: PageProps) {
           reviewerNotes: submission.reviewerNotes,
           repoMetadataJson: submission.repoMetadataJson,
           screenshotUrls: submission.screenshotUrls,
+          videoUrl: submission.videoUrl,
           categories: submission.categories.map((row) => ({
             id: row.category.id,
             name: row.category.name,

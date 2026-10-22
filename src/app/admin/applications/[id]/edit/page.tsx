@@ -64,6 +64,7 @@ export default async function AdminApplicationEditPage({
     openIssuesCount: app.openIssuesCount,
     logoUrl: app.logoUrl ?? "",
     screenshotUrls: app.screenshotUrls ?? [],
+    videoUrl: app.videoUrl ?? "",
     latestReleaseTag: app.latestReleaseTag ?? "",
     latestReleaseUrl: app.latestReleaseUrl ?? "",
     published: Boolean(app.publishedAt),

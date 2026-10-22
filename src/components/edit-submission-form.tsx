@@ -48,6 +48,7 @@ type EditSubmissionFormProps = {
     reviewerNotes: string | null;
     repoMetadataJson: unknown;
     screenshotUrls: string[];
+    videoUrl: string | null;
     categories: EntityOption[];
     alternatives: EntityOption[];
   };
@@ -76,6 +77,7 @@ export function EditSubmissionForm({
   const [screenshotUrls, setScreenshotUrls] = useState(
     submission.screenshotUrls ?? [],
   );
+  const [videoUrl, setVideoUrl] = useState(submission.videoUrl ?? "");
   const [categories, setCategories] = useState<EntityOption[]>(
     submission.categories ?? [],
   );
@@ -124,6 +126,7 @@ export function EditSubmissionForm({
           homepageUrl,
           logoUrl,
           screenshotUrls,
+          videoUrl,
           repositoryUrl: submission.repositoryUrl,
           primaryLanguage,
           licenseSlug,
@@ -205,6 +208,23 @@ export function EditSubmissionForm({
             fieldErrors={fieldErrors.screenshotUrls}
             appName={name || submission.name}
           />
+          <div className="space-y-2">
+            <Label htmlFor="videoUrl">Video URL (optional)</Label>
+            <Input
+              id="videoUrl"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=…"
+            />
+            <p className="text-xs text-muted-foreground">
+              Demo or walkthrough link (YouTube, Vimeo, or https).
+            </p>
+            {fieldErrors.videoUrl?.[0] && (
+              <p className="text-sm text-destructive" role="alert">
+                {fieldErrors.videoUrl[0]}
+              </p>
+            )}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input

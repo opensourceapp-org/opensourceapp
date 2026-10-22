@@ -362,6 +362,7 @@ export async function updateApplicationFromAdminInput(
         openIssuesCount: input.openIssuesCount ?? null,
         logoUrl: emptyToNull(input.logoUrl),
         screenshotUrls: input.screenshotUrls ?? [],
+        videoUrl: emptyToNull(input.videoUrl),
         latestReleaseTag: emptyToNull(input.latestReleaseTag),
         latestReleaseUrl: emptyToNull(input.latestReleaseUrl),
         publishedAt,

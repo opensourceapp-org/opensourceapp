@@ -10,6 +10,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { submissionFieldErrorsFromZod } from "@/lib/validation/submission-errors";
 import { submissionFormSchema } from "@/lib/validation/submission";
 import { normalizeScreenshotUrlList } from "@/lib/validation/screenshot-urls";
+import { normalizeVideoUrl } from "@/lib/validation/video-url";
 import { canTransitionSubmission } from "@/lib/applications/submission-status";
 import { Prisma, SubmissionStatus } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
@@ -153,6 +154,7 @@ function buildSubmissionPayload(
     lastCommitAt: meta?.lastCommitAt ? new Date(meta.lastCommitAt) : null,
     primaryLanguage: data.primaryLanguage || meta?.primaryLanguage || null,
     screenshotUrls: normalizeScreenshotUrlList(data.screenshotUrls ?? []),
+    videoUrl: normalizeVideoUrl(data.videoUrl),
     repoMetadataJson: baseMeta as Prisma.InputJsonValue,
     status,
     userId,

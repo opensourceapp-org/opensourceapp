@@ -33,6 +33,7 @@ Admins can create directory listings in bulk from a spreadsheet at **`/admin/bul
 | `open_issues_count` | no | Non-negative integer |
 | `last_commit_at` | no | ISO 8601 datetime |
 | `logo_url` | no | Image URL |
+| `video_url` | no | Demo video URL (YouTube, Vimeo, or https) |
 | `latest_release_tag` | no | |
 | `latest_release_at` | no | ISO 8601 datetime |
 | `latest_release_url` | no | URL |

@@ -46,6 +46,7 @@ export const bulkImportRowSchema = z.object({
   openIssuesCount: optionalInt,
   lastCommitAt: optionalDate,
   logoUrl: optionalUrl,
+  videoUrl: optionalUrl,
   latestReleaseTag: z.string().max(120).optional().or(z.literal("")),
   latestReleaseAt: optionalDate,
   latestReleaseUrl: optionalUrl,
