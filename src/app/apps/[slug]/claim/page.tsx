@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClaimAppForm } from "@/components/claim-app-form";
-import { ClaimRepositoryVerificationPanel } from "@/components/claim-repository-verification-panel";
+import { ClaimVerificationFlow } from "@/components/claim-verification-flow";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,6 @@ import { ApplicationClaimStatus } from "@/generated/prisma";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
-type SearchParams = Promise<{ claim?: string }>;
 
 async function getApplication(slug: string) {
   return prisma.application.findFirst({
@@ -31,15 +29,8 @@ async function getApplication(slug: string) {
   });
 }
 
-export default async function ClaimAppPage({
-  params,
-  searchParams,
-}: {
-  params: Params;
-  searchParams: SearchParams;
-}) {
+export default async function ClaimAppPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const { claim: claimIdParam } = await searchParams;
   const session = await requireAuth(`/apps/${slug}/claim`);
   const app = await getApplication(slug);
   if (!app) notFound();
@@ -70,11 +61,9 @@ export default async function ClaimAppPage({
     orderBy: { createdAt: "desc" },
   });
 
-  const pendingClaim =
-    userClaims.find((c) => c.status === ApplicationClaimStatus.PENDING) ??
-    (claimIdParam
-      ? userClaims.find((c) => c.id === claimIdParam) ?? null
-      : null);
+  const pendingClaim = userClaims.find(
+    (c) => c.status === ApplicationClaimStatus.PENDING,
+  );
 
   const canSubmit = canUserSubmitClaim({
     application: app,
@@ -94,32 +83,22 @@ export default async function ClaimAppPage({
       <header className="space-y-2">
         <h1 className="font-display text-2xl font-medium">Claim {app.name}</h1>
         <p className="text-muted-foreground text-sm">
-          Tell us how you maintain this project. We review every claim before
-          granting listing access.
+          Verify control of the listing&apos;s source repository with{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            .opensourceapp/verification
+          </code>
+          , the same way as submitting a new app. A moderator will review your
+          claim afterward.
         </p>
       </header>
 
-      {pendingClaim ? (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-border p-4 text-sm">
-            <p className="font-medium">Claim status: Pending review</p>
-            <p className="mt-1 text-muted-foreground">
-              Submitted {pendingClaim.createdAt.toLocaleString()}. You can still
-              verify the repository while we review.
-            </p>
-          </div>
-          {pendingClaim.status === ApplicationClaimStatus.PENDING && (
-            <ClaimRepositoryVerificationPanel
-              claimId={pendingClaim.id}
-              appName={app.name}
-            />
-          )}
-          <Button asChild variant="outline">
-            <Link href="/dashboard">View on dashboard</Link>
-          </Button>
-        </div>
-      ) : canSubmit ? (
-        <ClaimAppForm applicationId={app.id} applicationSlug={app.slug} />
+      {pendingClaim || canSubmit ? (
+        <ClaimVerificationFlow
+          applicationId={app.id}
+          applicationSlug={app.slug}
+          appName={app.name}
+          initialClaimId={pendingClaim?.id ?? null}
+        />
       ) : (
         <div className="space-y-4">
           <p className="text-muted-foreground text-sm">

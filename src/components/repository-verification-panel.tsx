@@ -9,12 +9,20 @@ import {
   regenerateVerificationTokenAction,
   verifyRepositoryOwnershipAction,
 } from "@/server/actions/repository-verification";
+import {
+  ensureClaimVerificationTokenAction,
+  getClaimVerificationStateAction,
+  regenerateClaimVerificationTokenAction,
+  verifyClaimRepositoryOwnershipAction,
+} from "@/server/actions/claim-repository-verification";
 import { AppIcon } from "@/components/app-icon";
 import type { OssCheckLine } from "@/lib/applications/repository-oss-checks";
 
 type Props = {
-  submissionId: string | null;
+  submissionId?: string | null;
+  claimId?: string | null;
   appName?: string;
+  initialVerificationToken?: string | null;
   onVerifiedChange?: (verified: boolean) => void;
   onIconPreviewChange?: (iconUrl: string | null) => void;
   onScreenshotUrlsChange?: (urls: string[]) => void;
@@ -33,13 +41,15 @@ function StatusDot({ status }: { status: OssCheckLine["status"] }) {
 }
 
 export function RepositoryVerificationPanel({
-  submissionId,
+  submissionId = null,
+  claimId = null,
   appName = "App",
+  initialVerificationToken = null,
   onVerifiedChange,
   onIconPreviewChange,
   onScreenshotUrlsChange,
 }: Props) {
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(initialVerificationToken);
   const [ownershipVerified, setOwnershipVerified] = useState(false);
   const [ossChecks, setOssChecks] = useState<OssCheckLine[]>([]);
   const [verificationPath, setVerificationPath] = useState(
@@ -53,69 +63,139 @@ export function RepositoryVerificationPanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (!submissionId) return;
-    startTransition(async () => {
-      const state = await getRepositoryVerificationStateAction(submissionId);
-      if (state.data) {
-        setOwnershipVerified(state.data.ownershipVerified);
-        setOssChecks(state.data.ossChecks);
-        setVerificationPath(state.data.verificationPath);
-        setLogoPath(state.data.logoPath);
-        setScreenshotsPath(state.data.screenshotsPath);
-        setIconPreviewUrl(state.data.iconPreviewUrl);
-        onScreenshotUrlsChange?.(state.data.screenshotUrls ?? []);
-        onIconPreviewChange?.(state.data.iconPreviewUrl);
-        onVerifiedChange?.(state.data.ownershipVerified);
-      }
-      const tokenRes = await ensureVerificationTokenAction(submissionId);
-      if (tokenRes.data?.token) {
-        setToken(tokenRes.data.token);
-      }
-    });
-  }, [submissionId, onVerifiedChange, onIconPreviewChange, onScreenshotUrlsChange]);
+  const ready = Boolean(submissionId || claimId);
 
-  function verify() {
-    if (!submissionId) return;
-    setError(null);
+  useEffect(() => {
+    if (initialVerificationToken) {
+      setToken(initialVerificationToken);
+    }
+  }, [initialVerificationToken]);
+
+  useEffect(() => {
+    if (!ready) return;
     startTransition(async () => {
-      const res = await verifyRepositoryOwnershipAction(submissionId);
-      if (res.error) {
-        setError(res.error);
+      if (submissionId) {
+        const state = await getRepositoryVerificationStateAction(submissionId);
+        if (state.data) {
+          setOwnershipVerified(state.data.ownershipVerified);
+          setOssChecks(state.data.ossChecks);
+          setVerificationPath(state.data.verificationPath);
+          setLogoPath(state.data.logoPath);
+          setScreenshotsPath(state.data.screenshotsPath);
+          setIconPreviewUrl(state.data.iconPreviewUrl);
+          onScreenshotUrlsChange?.(state.data.screenshotUrls ?? []);
+          onIconPreviewChange?.(state.data.iconPreviewUrl);
+          onVerifiedChange?.(state.data.ownershipVerified);
+        }
+        const tokenRes = await ensureVerificationTokenAction(submissionId);
+        if (tokenRes.data?.token) {
+          setToken(tokenRes.data.token);
+        }
         return;
       }
-      setOwnershipVerified(true);
-      onVerifiedChange?.(true);
-      const state = await getRepositoryVerificationStateAction(submissionId);
-      if (state.data) {
-        setOssChecks(state.data.ossChecks);
-        setIconPreviewUrl(state.data.iconPreviewUrl);
-        onIconPreviewChange?.(state.data.iconPreviewUrl);
+
+      if (claimId) {
+        const state = await getClaimVerificationStateAction(claimId);
+        if (state.data) {
+          setOwnershipVerified(state.data.ownershipVerified);
+          setOssChecks(state.data.ossChecks);
+          setVerificationPath(state.data.verificationPath);
+          setLogoPath(state.data.logoPath);
+          setScreenshotsPath(state.data.screenshotsPath);
+          setIconPreviewUrl(state.data.iconPreviewUrl);
+          onIconPreviewChange?.(state.data.iconPreviewUrl);
+          onVerifiedChange?.(state.data.ownershipVerified);
+        }
+        if (!initialVerificationToken) {
+          const tokenRes = await ensureClaimVerificationTokenAction(claimId);
+          if (tokenRes.data?.token) {
+            setToken(tokenRes.data.token);
+          }
+        }
       }
-      if (res.data?.iconPreviewUrl) {
-        setIconPreviewUrl(res.data.iconPreviewUrl);
-        onIconPreviewChange?.(res.data.iconPreviewUrl);
+    });
+  }, [
+    submissionId,
+    claimId,
+    ready,
+    initialVerificationToken,
+    onVerifiedChange,
+    onIconPreviewChange,
+    onScreenshotUrlsChange,
+  ]);
+
+  function verify() {
+    setError(null);
+    startTransition(async () => {
+      if (submissionId) {
+        const res = await verifyRepositoryOwnershipAction(submissionId);
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+        setOwnershipVerified(true);
+        onVerifiedChange?.(true);
+        const state = await getRepositoryVerificationStateAction(submissionId);
+        if (state.data) {
+          setOssChecks(state.data.ossChecks);
+          setIconPreviewUrl(state.data.iconPreviewUrl);
+          onIconPreviewChange?.(state.data.iconPreviewUrl);
+        }
+        if (res.data?.iconPreviewUrl) {
+          setIconPreviewUrl(res.data.iconPreviewUrl);
+          onIconPreviewChange?.(res.data.iconPreviewUrl);
+        }
+        if (res.data?.screenshotUrls) {
+          onScreenshotUrlsChange?.(res.data.screenshotUrls);
+        }
+        return;
       }
-      if (res.data?.screenshotUrls) {
-        onScreenshotUrlsChange?.(res.data.screenshotUrls);
+
+      if (claimId) {
+        const res = await verifyClaimRepositoryOwnershipAction(claimId);
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+        setOwnershipVerified(true);
+        onVerifiedChange?.(true);
+        const state = await getClaimVerificationStateAction(claimId);
+        if (state.data?.iconPreviewUrl) {
+          setIconPreviewUrl(state.data.iconPreviewUrl);
+          onIconPreviewChange?.(state.data.iconPreviewUrl);
+        }
+        if (res.data?.iconPreviewUrl) {
+          setIconPreviewUrl(res.data.iconPreviewUrl);
+          onIconPreviewChange?.(res.data.iconPreviewUrl);
+        }
       }
     });
   }
 
   function regenerate() {
-    if (!submissionId) return;
     setError(null);
     startTransition(async () => {
-      const res = await regenerateVerificationTokenAction(submissionId);
-      if (res.error) {
-        setError(res.error);
+      if (submissionId) {
+        const res = await regenerateVerificationTokenAction(submissionId);
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+        if (res.data?.token) setToken(res.data.token);
         return;
       }
-      if (res.data?.token) setToken(res.data.token);
+      if (claimId) {
+        const res = await regenerateClaimVerificationTokenAction(claimId);
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+        if (res.data?.token) setToken(res.data.token);
+      }
     });
   }
 
-  if (!submissionId) {
+  if (!ready) {
     return (
       <p className="text-sm text-muted-foreground">
         Continue from the previous step to save a draft before verifying your
@@ -123,6 +203,10 @@ export function RepositoryVerificationPanel({
       </p>
     );
   }
+
+  const verifiedMessage = claimId
+    ? "Ownership verified — your claim will show verification to moderators."
+    : "Ownership verified — you can continue to review and submit.";
 
   return (
     <div className="space-y-6">
@@ -145,7 +229,14 @@ export function RepositoryVerificationPanel({
         <p className="font-medium">Prove repository ownership</p>
         <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
           <li>
-            Create a file at{" "}
+            Create the{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+              .opensourceapp
+            </code>{" "}
+            folder in your repository if it does not exist yet.
+          </li>
+          <li>
+            Add a file at{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-foreground">
               {verificationPath}
             </code>{" "}
@@ -158,13 +249,15 @@ export function RepositoryVerificationPanel({
             </code>{" "}
             (SVG, max 256KB).
           </li>
-          <li>
-            Optional: add screenshots under{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-foreground">
-              {screenshotsPath}/
-            </code>{" "}
-            (PNG, JPEG, or WebP). We import them when you verify.
-          </li>
+          {!claimId && (
+            <li>
+              Optional: add screenshots under{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+                {screenshotsPath}/
+              </code>{" "}
+              (PNG, JPEG, or WebP). We import them when you verify.
+            </li>
+          )}
           <li>Click Verify below after pushing the file.</li>
         </ol>
 
@@ -196,7 +289,7 @@ export function RepositoryVerificationPanel({
         {ownershipVerified && (
           <div className="space-y-3">
             <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-              Ownership verified — you can continue to review and submit.
+              {verifiedMessage}
             </p>
             {iconPreviewUrl ? (
               <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
@@ -215,7 +308,7 @@ export function RepositoryVerificationPanel({
                 <code className="rounded bg-muted px-1 py-0.5 text-foreground">
                   {logoPath}
                 </code>
-                . You can add a logo URL on the app info step.
+                .
               </p>
             )}
           </div>
