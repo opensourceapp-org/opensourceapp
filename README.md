@@ -10,7 +10,7 @@ Next.js (App Router), TypeScript, PostgreSQL, Prisma, Tailwind CSS, shadcn/ui, A
 
 1. Copy `.env.example` to `.env` and fill in values.
 2. Start PostgreSQL: `docker compose up -d db`
-3. Apply schema: `npm run db:push` (or `npm run db:migrate`)
+3. Apply schema: see [docs/database-migrations.md](docs/database-migrations.md). Existing DBs: `npx prisma migrate resolve --applied 20251023000000_init` then `npm run db:migrate:deploy`. Fresh DBs: `npm run db:migrate:deploy`. Local prototyping: `npm run db:push`.
 4. Seed reference data: `npm run db:seed`
 5. Run dev server: `npm run dev`
 
