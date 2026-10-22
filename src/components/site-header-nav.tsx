@@ -42,13 +42,10 @@ export function SiteHeaderNav({
   return (
     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
       {user ? (
-        <>
+        <div className="hidden items-center gap-0.5 sm:flex">
           <Link
             href="/dashboard"
-            className={cn(
-              navLink,
-              "hidden max-w-[11rem] gap-2 text-foreground sm:inline-flex",
-            )}
+            className="inline-flex max-w-[12rem] items-center gap-2 rounded-full px-2 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <UserAvatar
               name={user.name}
@@ -57,8 +54,8 @@ export function SiteHeaderNav({
             />
             <span className="truncate">{displayName}</span>
           </Link>
-          <div className="hidden sm:block">{signOutButton}</div>
-        </>
+          {signOutButton}
+        </div>
       ) : (
         <Button asChild size="sm" className="hidden min-h-10 sm:inline-flex">
           <Link href="/login">Sign in</Link>
