@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { getSiteUrl, SITE_DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/site-url";
 import { AppCard } from "@/components/app-card";
 import { HomeHeroSearch } from "@/components/home-hero-search";
 import { HomeHeroSection } from "@/components/visual/home-hero-section";
@@ -9,6 +11,17 @@ import { prisma } from "@/lib/db";
 import { searchPublishedApplications } from "@/lib/search/applications";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    url: getSiteUrl(),
+    title: `${SITE_NAME} — Curated open-source application directory`,
+    description: SITE_DEFAULT_DESCRIPTION,
+  },
+};
 
 export default async function HomePage() {
   let featured: Awaited<
@@ -51,14 +64,14 @@ export default async function HomePage() {
         <HomeHeroSection className="px-4 md:px-4">
         <div className="mx-auto max-w-3xl space-y-3 text-center">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">
-            Open-source discovery
+            OpenSourceApp.org
           </p>
           <h1 className="font-display text-balance text-4xl font-normal tracking-tight md:text-5xl">
-            Discover great open-source software
+            OpenSourceApp
           </h1>
           <p className="text-balance text-lg text-muted-foreground">
-            Curated applications with transparent licensing, platform support,
-            and verification signals — built for developers who ship.
+            Discover great open-source software — curated applications with
+            transparent licensing, platform support, and verification signals.
           </p>
         </div>
         <div className="mx-auto max-w-2xl">
